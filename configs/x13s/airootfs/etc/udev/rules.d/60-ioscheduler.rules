@@ -1,0 +1,2 @@
+# NVMe: bypass software I/O scheduler (hardware handles queuing)
+ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/scheduler}="none"
