@@ -1,28 +1,22 @@
 # TODO: might need archlinuxarm-keyring and archlinux-keyring (note that archlinux-keyring has never existed in the x86_64 iso installer)
 alsa-utils
-amd-ucode
 arch-install-scripts
 archinstall
 archlinuxarm-keyring
 base
 bind-tools
 brltty
-#broadcom-wl
 btrfs-progs
 clonezilla
-#cloud-init
-crda
 cryptsetup
 darkhttpd
 ddrescue
 dhclient
 dhcpcd
 diffutils
-dmraid
 dnsmasq
 dosfstools
 e2fsprogs
-#edk2-shell
 efibootmgr
 erofs-utils
 espeakup
@@ -33,13 +27,8 @@ fatresize
 fsarchiver
 openbsd-netcat
 gpart
-gpm
 gptfdisk
 grml-zsh-config
-hdparm
-#intel-ucode
-#ipw2100-fw
-#ipw2200-fw
 irssi
 iw
 iwd
@@ -49,7 +38,6 @@ less
 lftp
 libfido2
 libusb-compat
-linux-atm
 linux-firmware
 linux-firmware-qcom
 livecd-sounds
@@ -60,7 +48,6 @@ man-db
 man-pages
 mc
 mdadm
-#memtest86+
 mkinitcpio
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
@@ -82,11 +69,7 @@ parted
 partimage
 pcsclite
 ppp
-pptpclient
 pv
-qemu-guest-agent
-#reflector
-#rp-pppoe
 rsync
 rxvt-unicode-terminfo
 screen
@@ -95,7 +78,6 @@ sg3_utils
 smartmontools
 squashfs-tools
 sudo
-#syslinux
 systemd-resolvconf
 tcpdump
 terminus-font
@@ -107,14 +89,10 @@ usb_modeswitch
 usbmuxd
 usbutils
 vim
-#virtualbox-guest-utils-nox
 vpnc
 wireless-regdb
 wireless_tools
-wpa_supplicant
-wvdial
 xfsprogs
-xl2tpd
 zsh
 
 # Custom Packages go here
