@@ -31,16 +31,12 @@ build_short:
   extends: .build
   parallel:
     matrix:
-      - BUILD_SCRIPT_ARGS: baseline bootstrap
-      - BUILD_SCRIPT_ARGS: releng bootstrap
+      - BUILD_SCRIPT_ARGS: x13s bootstrap
 
 build_long:
   extends: .build
   parallel:
     matrix:
-      - BUILD_SCRIPT_ARGS: baseline iso
-      - BUILD_SCRIPT_ARGS: baseline netboot
-      - BUILD_SCRIPT_ARGS: releng iso
-      - BUILD_SCRIPT_ARGS: releng netboot
+      - BUILD_SCRIPT_ARGS: x13s iso
   tags:
     - fast-single-thread

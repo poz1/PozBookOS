@@ -21,11 +21,6 @@ The instructions in the [Installation_guide](https://wiki.archlinux.org/title/In
 [ironrobin-x13s]
 Server = https://github.com/ironrobin/x13s-alarm/releases/download/packages
 ```
-OR
-```
-[ironrobin-volterra]
-Server = https://github.com/ironrobin/volterra-alarm/releases/download/packages
-```
 
 You'll need to trust the public key in order to verify package signature:
 

@@ -22,5 +22,5 @@ All ash and bash scripts are linted using shellcheck:
 Testing
 =======
 
-Contributors are expected to test their contributions by building the releng profile and running the resulting image
+Contributors are expected to test their contributions by building the x13s profile and running the resulting image
 using `run_archiso <scripts/run_archiso.sh>`_.

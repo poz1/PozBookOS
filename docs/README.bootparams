@@ -9,7 +9,7 @@ INDEX
   * hooks/archiso_pxe_nfs
   * hooks/archiso_loop_mnt
 
-* Boot parameters (configs/releng)
+* Boot parameters (configs/x13s)
   * scripts/choose-mirror
 
 
@@ -132,7 +132,7 @@ INDEX
 
 
 
-*** Boot parameters (configs/releng)
+*** Boot parameters (configs/x13s)
 
 ** scripts/choose-mirror
 

@@ -1,7 +1,7 @@
 INDEX
 -----
 
-* Transfer ISO file to target medium (configs/releng)
+* Transfer ISO file to target medium (configs/x13s)
   * To -> CD / DVD / BD
   * To -> USB-key / SD / HDD / SSD
     * PC-BIOS (MBR)
@@ -11,7 +11,7 @@ INDEX
 
 
 
-*** Transfer ISO image to target medium (configs/releng)
+*** Transfer ISO image to target medium (configs/x13s)
 
 ISO images names consist of: archlinux-<YYYY>.<MM>.<DD>-x86_64.iso
 

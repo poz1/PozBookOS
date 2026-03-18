@@ -1,7 +1,7 @@
 INDEX
 -----
 
-* Alternative boot methods (configs/releng)
+* Alternative boot methods (configs/x13s)
   * ISO in loopback mode
   * ISO in memdisk mode
   * Network booting (PXE) [first stage]
@@ -11,7 +11,7 @@ INDEX
 
 
 
-*** Alternative boot methods (configs/releng)
+*** Alternative boot methods (configs/x13s)
 
 ISO images names consist of: archlinux-<YYYY>.<MM>.<DD>-x86_64.iso
 
