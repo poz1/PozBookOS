@@ -9,7 +9,7 @@ INSTALL_DIR=$(DESTDIR)/usr/lib/initcpio/install
 HOOKS_DIR=$(DESTDIR)/usr/lib/initcpio/hooks
 SCRIPT_DIR=$(DESTDIR)/usr/lib/initcpio
 
-DOC_FILES=$(wildcard docs/*) $(wildcard *.rst)
+DOC_FILES=$(wildcard docs/*)
 
 DOC_DIR=$(DESTDIR)/usr/share/doc/archiso
 
@@ -20,21 +20,19 @@ check: lint
 
 lint:
 	shellcheck -s bash archiso/mkarchiso \
-	                   $(wildcard scripts/*.sh) \
+	                   $(wildcard build/*.sh) \
 	                   $(wildcard .gitlab/ci/*.sh) \
 	                   $(INSTALL_FILES) \
-	                   $(wildcard configs/*/build.sh) \
-	                   $(wildcard configs/*/profiledef.sh) \
-	                   configs/x13s/airootfs/root/.automated_script.sh \
-	                   configs/x13s/airootfs/usr/local/bin/choose-mirror \
-	                   configs/x13s/airootfs/usr/local/bin/livecd-sound
+	                   $(wildcard profiles/*/profiledef.sh) \
+	                   profiles/x13s/airootfs/root/.automated_script.sh \
+	                   profiles/x13s/airootfs/usr/local/bin/choose-mirror \
+	                   profiles/x13s/airootfs/usr/local/bin/livecd-sound
 	shellcheck -s dash $(HOOKS_FILES) $(SCRIPT_FILES)
 
 install: install-program install-examples install-doc
 
 install-program:
 	install -vDm 755 archiso/mkarchiso -t "$(DESTDIR)/usr/bin/"
-	install -vDm 755 scripts/run_archiso.sh "$(DESTDIR)/usr/bin/run_archiso"
 
 install-initcpio:
 	install -d $(SCRIPT_DIR) $(HOOKS_DIR) $(INSTALL_DIR)
@@ -44,7 +42,7 @@ install-initcpio:
 
 install-examples:
 	install -d -m 755 $(DESTDIR)/usr/share/archiso/
-	cp -a --no-preserve=ownership configs $(DESTDIR)/usr/share/archiso/
+	cp -a --no-preserve=ownership profiles $(DESTDIR)/usr/share/archiso/
 
 install-doc:
 	install -vDm 644 $(DOC_FILES) -t $(DOC_DIR)

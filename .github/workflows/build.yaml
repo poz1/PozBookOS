@@ -22,4 +22,4 @@ jobs:
           
       - name: build the ISO
         run: |
-          echo ${{ secrets.SUDO_PASSWD }} | sudo -S ./archiso/mkarchiso -v configs/x13s
+          echo ${{ secrets.SUDO_PASSWD }} | sudo -S ./archiso/mkarchiso -v profiles/x13s

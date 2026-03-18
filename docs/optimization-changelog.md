@@ -338,7 +338,7 @@ Removed support for formats not used by this system:
 
 ### Boot parameters
 
-**File:** `configs/x13s/efiboot/loader/entries/01-archiso-linux.conf`
+**File:** `profiles/x13s/efiboot/loader/entries/01-archiso-linux.conf`
 
 ```
 quiet loglevel=3 audit=0 efi=noruntime pd_ignore_unused clk_ignore_unused
@@ -366,14 +366,14 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### Boot loader
 
-**File:** `configs/x13s/efiboot/loader/loader.conf`
+**File:** `profiles/x13s/efiboot/loader/loader.conf`
 
 - Timeout reduced from 15s to 3s
 - Removed `beep on` (no PC speaker on ARM64)
 
 ### Sysctl tuning
 
-**File:** `configs/x13s/airootfs/etc/sysctl.d/99-performance.conf`
+**File:** `profiles/x13s/airootfs/etc/sysctl.d/99-performance.conf`
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
@@ -402,7 +402,7 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### Sysfs tuning (tmpfiles.d)
 
-**File:** `configs/x13s/airootfs/etc/tmpfiles.d/10-performance.conf`
+**File:** `profiles/x13s/airootfs/etc/tmpfiles.d/10-performance.conf`
 
 | Path | Value | Purpose |
 |------|-------|---------|
@@ -417,7 +417,7 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### I/O scheduler rules
 
-**File:** `configs/x13s/airootfs/etc/udev/rules.d/60-ioscheduler.rules`
+**File:** `profiles/x13s/airootfs/etc/udev/rules.d/60-ioscheduler.rules`
 
 | Device | Scheduler | Reason |
 |--------|-----------|--------|
@@ -426,7 +426,7 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### Power management rules
 
-**File:** `configs/x13s/airootfs/etc/udev/rules.d/70-power-management.rules`
+**File:** `profiles/x13s/airootfs/etc/udev/rules.d/70-power-management.rules`
 
 | Rule | Purpose |
 |------|---------|
@@ -436,7 +436,7 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### zram configuration
 
-**File:** `configs/x13s/airootfs/etc/systemd/zram-generator.conf`
+**File:** `profiles/x13s/airootfs/etc/systemd/zram-generator.conf`
 
 | Setting | Value |
 |---------|-------|
@@ -446,7 +446,7 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### iwd WiFi configuration
 
-**File:** `configs/x13s/airootfs/etc/iwd/main.conf`
+**File:** `profiles/x13s/airootfs/etc/iwd/main.conf`
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
@@ -458,20 +458,20 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 
 ### WiFi power save
 
-**File:** `configs/x13s/airootfs/etc/systemd/network/99-wifi-powersave.link`
+**File:** `profiles/x13s/airootfs/etc/systemd/network/99-wifi-powersave.link`
 
 Enables WiFi power save mode at the driver level for all WLAN interfaces.
 
 ### WiFi roaming stability
 
-**File:** `configs/x13s/airootfs/etc/systemd/network/20-wlan.network`
+**File:** `profiles/x13s/airootfs/etc/systemd/network/20-wlan.network`
 
 Added `IgnoreCarrierLoss=3s` to prevent networkd from tearing down connections
 during brief carrier drops that occur during WiFi roaming/channel switches.
 
 ### DNS privacy
 
-**File:** `configs/x13s/airootfs/etc/systemd/resolved.conf.d/archiso.conf`
+**File:** `profiles/x13s/airootfs/etc/systemd/resolved.conf.d/archiso.conf`
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
@@ -480,13 +480,13 @@ during brief carrier drops that occur during WiFi roaming/channel switches.
 
 ### Journal storage
 
-**File:** `configs/x13s/airootfs/etc/systemd/journald.conf.d/volatile-storage.conf`
+**File:** `profiles/x13s/airootfs/etc/systemd/journald.conf.d/volatile-storage.conf`
 
 Added `RuntimeMaxUse=64M` to cap journal RAM usage (was unbounded).
 
 ### Module parameters
 
-**File:** `configs/x13s/airootfs/etc/modprobe.d/audio-powersave.conf`
+**File:** `profiles/x13s/airootfs/etc/modprobe.d/audio-powersave.conf`
 
 | Module | Parameter | Purpose |
 |--------|-----------|---------|
@@ -496,7 +496,7 @@ Added `RuntimeMaxUse=64M` to cap journal RAM usage (was unbounded).
 
 ### Module blacklist
 
-**File:** `configs/x13s/airootfs/etc/modprobe.d/blacklist-unused.conf`
+**File:** `profiles/x13s/airootfs/etc/modprobe.d/blacklist-unused.conf`
 
 Blacklisted modules for hardware not present on the X13s:
 
@@ -508,14 +508,14 @@ Blacklisted modules for hardware not present on the X13s:
 
 ### Login manager
 
-**File:** `configs/x13s/airootfs/etc/systemd/logind.conf.d/do-not-suspend.conf`
+**File:** `profiles/x13s/airootfs/etc/systemd/logind.conf.d/do-not-suspend.conf`
 
 Added `HandleLidSwitchExternalPower=ignore` and `HandleLidSwitchDocked=ignore`
 for complete lid switch coverage in all power states.
 
 ### Initramfs
 
-**File:** `configs/x13s/airootfs/etc/mkinitcpio.conf`
+**File:** `profiles/x13s/airootfs/etc/mkinitcpio.conf`
 
 - Added `qnoc-sc8280xp` module (Qualcomm Network-on-Chip interconnect driver)
 - Enabled `COMPRESSION="zstd"` with `-3` level
@@ -524,7 +524,7 @@ for complete lid switch coverage in all power states.
 
 ### Squashfs compression
 
-**File:** `configs/x13s/profiledef.sh`
+**File:** `profiles/x13s/profiledef.sh`
 
 Changed from XZ to zstd:
 ```
@@ -557,7 +557,7 @@ application launches from the live squashfs filesystem.
 
 ### Packages
 
-**File:** `configs/x13s/packages.aarch64`
+**File:** `profiles/x13s/packages.aarch64`
 
 **Added (4):**
 - `irqbalance` -- IRQ distribution across CPUs
