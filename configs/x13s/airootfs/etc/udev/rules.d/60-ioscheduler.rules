@@ -1,2 +1,5 @@
 # NVMe: bypass software I/O scheduler (hardware handles queuing)
 ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/scheduler}="none"
+
+# SD/eMMC: use BFQ for per-process fairness on slow flash media
+ACTION=="add|change", KERNEL=="mmcblk[0-9]*", ATTR{queue/scheduler}="bfq"
