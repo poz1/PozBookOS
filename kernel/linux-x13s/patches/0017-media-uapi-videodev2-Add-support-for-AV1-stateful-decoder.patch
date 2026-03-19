@@ -1,0 +1,54 @@
+From ebeee183db20cd22d22367c0b2a8c0f449bba3ff Mon Sep 17 00:00:00 2001
+From: Deepa Guthyappa Madivalara <deepa.madivalara@oss.qualcomm.com>
+Date: Wed, 10 Dec 2025 10:59:04 -0800
+Subject: [PATCH] media: uapi: videodev2: Add support for AV1 stateful decoder
+
+Introduce a new pixel format, V4L2_PIX_FMT_AV1, to the
+Video4Linux2(V4L2) API. This format is intended for AV1
+bitstreams in stateful decoding/encoding workflows.
+The fourcc code 'AV10' is used to distinguish
+this format from the existing V4L2_PIX_FMT_AV1_FRAME,
+which is used for stateless AV1 decoder implementation.
+
+Reviewed-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Reviewed-by: Nicolas Dufresne <nicolas.dufresne@collabora.com>
+Reviewed-by: Hans Verkuil <hverkuil+cisco@kernel.org>
+Signed-off-by: Deepa Guthyappa Madivalara <deepa.madivalara@oss.qualcomm.com>
+Tested-by: Val Packett <val@packett.cool>
+Link: https://lore.kernel.org/r/20251210-av1d_stateful_v3-v10-1-cf4379a3dcff@oss.qualcomm.com
+---
+ .../userspace-api/media/v4l/pixfmt-compressed.rst         | 8 ++++++++
+ include/uapi/linux/videodev2.h                            | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
+index 806ed73ac474ce..bcbd0382242fbf 100644
+--- a/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
++++ b/Documentation/userspace-api/media/v4l/pixfmt-compressed.rst
+@@ -274,6 +274,14 @@ Compressed Formats
+         of macroblocks to decode a full corresponding frame to the matching
+         capture buffer.
+ 
++    * .. _V4L2-PIX-FMT-AV1:
++
++      - ``V4L2_PIX_FMT_AV1``
++      - 'AV01'
++      - AV1 compressed video frame. This format is adapted for implementing AV1
++        pipeline. The decoder implements stateful video decoder and expects one
++        temporal unit per buffer in OBU stream format.
++        The encoder generates one Temporal Unit per buffer.
+ .. raw:: latex
+ 
+     \normalsize
+diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
+index becd08fdbddb85..cf0b71bbe0f9d3 100644
+--- a/include/uapi/linux/videodev2.h
++++ b/include/uapi/linux/videodev2.h
+@@ -775,6 +775,7 @@ struct v4l2_pix_format {
+ #define V4L2_PIX_FMT_H264_SLICE v4l2_fourcc('S', '2', '6', '4') /* H264 parsed slices */
+ #define V4L2_PIX_FMT_HEVC_SLICE v4l2_fourcc('S', '2', '6', '5') /* HEVC parsed slices */
+ #define V4L2_PIX_FMT_AV1_FRAME v4l2_fourcc('A', 'V', '1', 'F') /* AV1 parsed frame */
++#define V4L2_PIX_FMT_AV1      v4l2_fourcc('A', 'V', '0', '1') /* AV1 */
+ #define V4L2_PIX_FMT_SPK      v4l2_fourcc('S', 'P', 'K', '0') /* Sorenson Spark */
+ #define V4L2_PIX_FMT_RV30     v4l2_fourcc('R', 'V', '3', '0') /* RealVideo 8 */
+ #define V4L2_PIX_FMT_RV40     v4l2_fourcc('R', 'V', '4', '0') /* RealVideo 9 & 10 */

@@ -1,0 +1,238 @@
+# AArch64 multi-platform
+# Maintainer: Alex Robinson <alex@ironrobin.net>
+
+buildarch=8
+_stable_tag=v6.18.12
+
+pkgbase=linux-x13s
+_srcname=linux-6.18
+_kernelname=${pkgbase#linux}
+_desc="ThinkPad X13s (Snapdragon 8cx Gen 3)"
+pkgver="6.18.12"
+pkgrel=1
+
+_arch=arm64
+arch=('aarch64')
+
+url="https://www.kernel.org/"
+license=('GPL-2.0-only')
+makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'git' 'uboot-tools' 'dtc'
+             'perl' 'python' 'openssl' 'libelf'
+             'clang' 'llvm' 'lld')
+
+# Cross-compile support when building from x86_64
+if [[ $(uname -m) != aarch64 ]]; then
+  _cross="aarch64-linux-gnu-"
+  makedepends+=('aarch64-linux-gnu-gcc')
+else
+  _cross=""
+fi
+options=('!strip')
+source=('config'
+        'linux.preset'
+        '60-linux.hook'
+        '90-linux.hook'
+        'mkinitcpio.conf.d-x13s.conf'
+        )
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+prepare() {
+  echo "Cloning mainline stable kernel ${_stable_tag}..."
+  [[ -d ${_srcname} ]] && rm -rf ${_srcname}
+  git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git \
+    ${_srcname} -b ${_stable_tag}
+
+  cd $_srcname
+
+  echo "Applying X13s patches (from steev's lenovo-x13s-linux-6.18.y)..."
+  local _patch
+  for _patch in "${startdir}"/patches/*.patch; do
+    echo "  Applying $(basename ${_patch})..."
+    patch -Np1 -i "${_patch}" || {
+      echo "ERROR: Failed to apply $(basename ${_patch})"
+      return 1
+    }
+  done
+
+  echo "Setting version..."
+  echo "-$pkgrel" > localversion.10-pkgrel
+  echo "${pkgbase#linux}" > localversion.20-pkgname
+
+  echo "Applying kernel config..."
+  cat "${srcdir}/config" > ./.config
+  make LLVM=1 LLVM_IAS=1 ${_cross:+CROSS_COMPILE=$_cross} ARCH=$_arch olddefconfig
+}
+
+build() {
+  cd ${_srcname}
+  export ARCH="$_arch"
+  export KBUILD_BUILD_HOST=pozbook
+  export KBUILD_BUILD_USER=builduser
+
+  # Use Clang/LLVM toolchain with ThinLTO and Cortex-X1C tuning
+  # Clang has a proper NeoverseV1 scheduling model for X1C cores (GCC uses generic cortexa57)
+  _llvm_args="LLVM=1 LLVM_IAS=1 KCFLAGS=-mcpu=cortex-x1c"
+  if [[ -n "$_cross" ]]; then
+    _llvm_args+=" CROSS_COMPILE=$_cross"
+  fi
+
+  # get kernel version
+  make $_llvm_args prepare
+  make $_llvm_args -s kernelrelease > version
+
+  # build!
+  unset LDFLAGS
+  make $_llvm_args ${MAKEFLAGS} Image Image.gz modules
+  # Generate device tree blobs with symbols to support applying device tree overlays in U-Boot
+  make $_llvm_args ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
+}
+
+_package() {
+  pkgdesc="The Linux Kernel and modules - ${_desc}"
+  depends=(
+    coreutils
+    kmod
+    mkinitcpio
+  )
+  optdepends=(
+    'wireless-regdb: to set the correct wireless channels of your country'
+    'linux-firmware: firmware images needed for some devices'
+    'linux-firmware-qcom: firmware images suggested for qcom devices'
+  )
+  provides=("linux=${pkgver}" "WIREGUARD-MODULE")
+  conflicts=('linux')
+  backup=("etc/mkinitcpio.d/${pkgbase}.preset")
+  install=${pkgname}.install
+
+  cd $_srcname
+  export ARCH="$_arch"
+  local kernver="$(<version)"
+  local modulesdir="$pkgdir/usr/lib/modules/$kernver"
+
+  echo "Installing boot image (compressed) and dtbs..."
+  install -Dm644 arch/arm64/boot/Image.gz -T "${pkgdir}/boot/vmlinuz-${pkgbase}"
+  install -Dm644 arch/arm64/boot/Image -T "${pkgdir}/boot/vmlinux-${pkgbase}"
+  # We just need the X13s dtb
+  install -Dm644 arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dtb -t "${pkgdir}/boot"
+
+  echo "Installing modules..."
+  make LLVM=1 LLVM_IAS=1 ${_cross:+CROSS_COMPILE=$_cross} INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 DEPMOD=/doesnt/exist modules_install
+
+  # remove build and source links if they exist
+  if [[ -L "$modulesdir"/source ]]; then
+    rm "$modulesdir"/source
+  fi
+  if [[ -L "$modulesdir"/build ]]; then
+    rm "$modulesdir"/build
+  fi
+
+  # sed expression for following substitutions
+  local _subst="
+    s|%PKGBASE%|${pkgbase}|g
+    s|%KERNVER%|${kernver}|g
+  "
+
+  # install mkinitcpio preset file
+  sed "${_subst}" ../linux.preset |
+    install -Dm644 /dev/stdin "${pkgdir}/etc/mkinitcpio.d/${pkgbase}.preset"
+
+  # install mkinitcpio.conf.d-x13s.conf
+  sed "${_subst}" ../mkinitcpio.conf.d-x13s.conf |
+    install -Dm644 /dev/stdin "${pkgdir}/etc/mkinitcpio.conf.d/x13s.conf"
+
+  # install pacman hooks
+  sed "${_subst}" ../60-linux.hook |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/libalpm/hooks/60-${pkgbase}.hook"
+  sed "${_subst}" ../90-linux.hook |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/libalpm/hooks/90-${pkgbase}.hook"
+}
+
+_package-headers() {
+  pkgdesc="Header files and scripts for building modules for linux kernel - ${_desc}"
+  provides=("linux-x13s-headers=${pkgver}")
+  conflicts=('linux-x13s-headers')
+
+  cd $_srcname
+  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
+
+  echo "Installing build files..."
+  install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+    localversion.* version vmlinux
+  install -Dt "$builddir/kernel" -m644 kernel/Makefile
+  install -Dt "$builddir/arch/arm64" -m644 arch/arm64/Makefile
+  cp -t "$builddir" -a scripts
+
+  # add xfs and shmem for aufs building
+  mkdir -p "$builddir"/{fs/xfs,mm}
+
+  echo "Installing headers..."
+  cp -t "$builddir" -a include
+  cp -t "$builddir/arch/arm64" -a arch/arm64/include
+  install -Dt "$builddir/arch/arm64/kernel" -m644 arch/arm64/kernel/asm-offsets.s
+  mkdir -p "$builddir/arch/arm"
+  cp -t "$builddir/arch/arm" -a arch/arm/include
+
+  install -Dt "$builddir/drivers/md" -m644 drivers/md/*.h
+  install -Dt "$builddir/net/mac80211" -m644 net/mac80211/*.h
+
+  # https://bugs.archlinux.org/task/13146
+  install -Dt "$builddir/drivers/media/i2c" -m644 drivers/media/i2c/msp3400-driver.h
+
+  # https://bugs.archlinux.org/task/20402
+  install -Dt "$builddir/drivers/media/usb/dvb-usb" -m644 drivers/media/usb/dvb-usb/*.h
+  install -Dt "$builddir/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
+  install -Dt "$builddir/drivers/media/tuners" -m644 drivers/media/tuners/*.h
+
+  # https://bugs.archlinux.org/task/71392
+  install -Dt "$builddir/drivers/iio/common/hid-sensors" -m644 drivers/iio/common/hid-sensors/*.h
+
+  echo "Installing KConfig files..."
+  find . -name 'Kconfig*' -exec install -Dm644 {} "$builddir/{}" \;
+
+  echo "Removing unneeded architectures..."
+  local arch
+  for arch in "$builddir"/arch/*/; do
+    [[ $arch = */arm64/ || $arch == */arm/ ]] && continue
+    echo "Removing $(basename "$arch")"
+    rm -r "$arch"
+  done
+
+  echo "Removing documentation..."
+  rm -r "$builddir/Documentation"
+
+  echo "Removing broken symlinks..."
+  find -L "$builddir" -type l -printf 'Removing %P\n' -delete
+
+  echo "Removing loose objects..."
+  find "$builddir" -type f -name '*.o' -printf 'Removing %P\n' -delete
+
+  echo "Stripping build tools..."
+  local file
+  while read -rd '' file; do
+    case "$(file -bi "$file")" in
+      application/x-sharedlib\;*)      # Libraries (.so)
+        strip -v $STRIP_SHARED "$file" ;;
+      application/x-archive\;*)        # Libraries (.a)
+        strip -v $STRIP_STATIC "$file" ;;
+      application/x-executable\;*)     # Binaries
+        strip -v $STRIP_BINARIES "$file" ;;
+      application/x-pie-executable\;*) # Relocatable binaries
+        strip -v $STRIP_SHARED "$file" ;;
+    esac
+  done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
+
+  echo "Adding symlink..."
+  mkdir -p "$pkgdir/usr/src"
+  ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
+}
+
+pkgname=("${pkgbase}" "${pkgbase}-headers")
+for _p in ${pkgname[@]}; do
+  eval "package_${_p}() {
+    _package${_p#${pkgbase}}
+  }"
+done

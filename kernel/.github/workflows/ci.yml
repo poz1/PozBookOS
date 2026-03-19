@@ -1,0 +1,47 @@
+name: Build packages
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: [self-hosted, linux, X64]
+    environment: "signing key"
+    steps:
+    - name: cleanup work dir
+      run: |
+        echo ${{ secrets.SUDO_PASSWD }} | sudo -S rm -rf $PWD
+        mkdir -p $PWD
+    - name: checkout repo
+      uses: actions/checkout@v4
+    - name: Build packages
+      run: |
+        echo "$GITHUB_REPOSITORY" > ./repo
+        echo -n "$IRONROBIN_SIGNING_KEY" > ./gpg_key
+        file ./gpg_key
+        docker run -t -v $PWD:/build archlinux:latest /bin/bash /build/entrypoint.sh
+        ls -l .
+      env:
+        IRONROBIN_SIGNING_KEY: ${{ secrets.IRONROBIN_SIGNING_KEY }}
+
+    - name: Print sha512sums
+      run: sha512sum *.pkg.tar.* 2>/dev/null || echo "No packages to checksum"
+
+    - name: Upload Packages Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: x13s-packages-${{ github.sha }}
+        path: |
+          ${{ github.workspace }}/*.pkg.tar.*
+          ${{ github.workspace }}/*-x13s.files*
+          ${{ github.workspace }}/*-x13s.db*
+
+    - name: Release
+      if: ${{ github.ref == 'refs/heads/aarch64' && !contains(github.event.head_commit.message, '[no rel]') }}
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ${{ github.workspace }}/*.pkg.tar.*
+          ${{ github.workspace }}/*-x13s.files*
+          ${{ github.workspace }}/*-x13s.db*
+        tag_name: packages
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

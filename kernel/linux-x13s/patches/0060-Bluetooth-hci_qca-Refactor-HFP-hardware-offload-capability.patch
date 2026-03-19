@@ -1,0 +1,85 @@
+From 69f13f91e24e0a99769a0084c439f0528ed4a5f5 Mon Sep 17 00:00:00 2001
+From: Mengshi Wu <mengshi.wu@oss.qualcomm.com>
+Date: Tue, 27 Jan 2026 10:54:22 +0800
+Subject: [PATCH] Bluetooth: hci_qca: Refactor HFP hardware offload capability
+ handling
+
+Replace SoC-specific check with capability-based approach for HFP
+hardware offload configuration. Add QCA_CAP_HFP_HW_OFFLOAD capability
+flag and support_hfp_hw_offload field to qca_serdev structure. Add
+QCA_CAP_HFP_HW_OFFLOAD capability flag to QCA2066 device data
+structures.
+
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Signed-off-by: Mengshi Wu <mengshi.wu@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260127025423.1418207-2-mengshi.wu@oss.qualcomm.com
+---
+ drivers/bluetooth/hci_qca.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/bluetooth/hci_qca.c b/drivers/bluetooth/hci_qca.c
+index fe37c4974fcacd..e9dfe77ca4916c 100644
+--- a/drivers/bluetooth/hci_qca.c
++++ b/drivers/bluetooth/hci_qca.c
+@@ -87,6 +87,7 @@ enum qca_flags {
+ enum qca_capabilities {
+ 	QCA_CAP_WIDEBAND_SPEECH = BIT(0),
+ 	QCA_CAP_VALID_LE_STATES = BIT(1),
++	QCA_CAP_HFP_HW_OFFLOAD  = BIT(2),
+ };
+ 
+ /* HCI_IBS transmit side sleep protocol states */
+@@ -229,6 +230,7 @@ struct qca_serdev {
+ 	u32 init_speed;
+ 	u32 oper_speed;
+ 	bool bdaddr_property_broken;
++	bool support_hfp_hw_offload;
+ 	const char *firmware_name[2];
+ };
+ 
+@@ -1925,7 +1927,7 @@ static int qca_setup(struct hci_uart *hu)
+ 	const char *rampatch_name = qca_get_rampatch_name(hu);
+ 	int ret;
+ 	struct qca_btsoc_version ver;
+-	struct qca_serdev *qcadev;
++	struct qca_serdev *qcadev = serdev_device_get_drvdata(hu->serdev);
+ 	const char *soc_name;
+ 
+ 	ret = qca_check_speeds(hu);
+@@ -1989,7 +1991,6 @@ static int qca_setup(struct hci_uart *hu)
+ 	case QCA_WCN6750:
+ 	case QCA_WCN6855:
+ 	case QCA_WCN7850:
+-		qcadev = serdev_device_get_drvdata(hu->serdev);
+ 		if (qcadev->bdaddr_property_broken)
+ 			hci_set_quirk(hdev, HCI_QUIRK_BDADDR_PROPERTY_BROKEN);
+ 
+@@ -2083,7 +2084,7 @@ static int qca_setup(struct hci_uart *hu)
+ 	else
+ 		hu->hdev->set_bdaddr = qca_set_bdaddr;
+ 
+-	if (soc_type == QCA_QCA2066)
++	if (qcadev->support_hfp_hw_offload)
+ 		qca_configure_hfp_offload(hdev);
+ 
+ 	qca->fw_version = le16_to_cpu(ver.patch_ver);
+@@ -2167,7 +2168,8 @@ static const struct qca_device_data qca_soc_data_wcn3998 __maybe_unused = {
+ static const struct qca_device_data qca_soc_data_qca2066 __maybe_unused = {
+ 	.soc_type = QCA_QCA2066,
+ 	.num_vregs = 0,
+-	.capabilities = QCA_CAP_WIDEBAND_SPEECH | QCA_CAP_VALID_LE_STATES,
++	.capabilities = QCA_CAP_WIDEBAND_SPEECH | QCA_CAP_VALID_LE_STATES |
++			QCA_CAP_HFP_HW_OFFLOAD,
+ };
+ 
+ static const struct qca_device_data qca_soc_data_qca6390 __maybe_unused = {
+@@ -2552,6 +2554,9 @@ static int qca_serdev_probe(struct serdev_device *serdev)
+ 
+ 		if (!(data->capabilities & QCA_CAP_VALID_LE_STATES))
+ 			hci_set_quirk(hdev, HCI_QUIRK_BROKEN_LE_STATES);
++
++		if (data->capabilities & QCA_CAP_HFP_HW_OFFLOAD)
++			qcadev->support_hfp_hw_offload = true;
+ 	}
+ 
+ 	return 0;

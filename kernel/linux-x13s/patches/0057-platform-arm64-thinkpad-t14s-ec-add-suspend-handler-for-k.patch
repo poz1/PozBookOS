@@ -1,0 +1,40 @@
+From 708d8731fd83fd917259a1e8a36f7b7e2e29be13 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sre@kernel.org>
+Date: Thu, 9 Oct 2025 00:31:40 +0200
+Subject: [PATCH] platform: arm64: thinkpad-t14s-ec: add suspend handler for
+ keyboard backlight
+
+This ensures that the keyboard backlight state is restored after
+a suspend-resume cycle. Otherwise the keyboard is automatically
+disabled during suspend and then stays disabled after resume.
+
+Note, that this adopts the same behavior as the existing Thinkpad
+ACPI driver.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ drivers/platform/arm64/lenovo-thinkpad-t14s.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/platform/arm64/lenovo-thinkpad-t14s.c b/drivers/platform/arm64/lenovo-thinkpad-t14s.c
+index cf8eff50d710df..5590302a5694f7 100644
+--- a/drivers/platform/arm64/lenovo-thinkpad-t14s.c
++++ b/drivers/platform/arm64/lenovo-thinkpad-t14s.c
+@@ -610,6 +610,8 @@ static int t14s_ec_suspend(struct device *dev)
+ {
+ 	struct t14s_ec *ec = dev_get_drvdata(dev);
+ 
++	led_classdev_suspend(&ec->kbd_backlight);
++
+ 	t14s_ec_write_sequence(ec, T14S_EC_REG_MODERN_STANDBY,
+ 			       T14S_EC_MODERN_STANDBY_ENTRY, 3);
+ 
+@@ -623,6 +625,8 @@ static int t14s_ec_resume(struct device *dev)
+ 	t14s_ec_write_sequence(ec, T14S_EC_REG_MODERN_STANDBY,
+ 			       T14S_EC_MODERN_STANDBY_EXIT, 3);
+ 
++	led_classdev_resume(&ec->kbd_backlight);
++
+ 	return 0;
+ }
+ 

@@ -1,0 +1,160 @@
+From c1946e217a751064e5561c461c7789ec828acea4 Mon Sep 17 00:00:00 2001
+From: Christopher Obbard <christopher.obbard@linaro.org>
+Date: Thu, 14 Aug 2025 16:16:09 +0200
+Subject: [PATCH] drm/dp: clamp PWM bit count to advertised MIN and MAX
+ capabilities
+
+According to the eDP specification (VESA Embedded DisplayPort Standard
+v1.4b, Section 3.3.10.2), if the value of DP_EDP_PWMGEN_BIT_COUNT is
+less than DP_EDP_PWMGEN_BIT_COUNT_CAP_MIN, the sink is required to use
+the MIN value as the effective PWM bit count.
+
+This commit updates the logic to clamp the reported
+DP_EDP_PWMGEN_BIT_COUNT to the range defined by _CAP_MIN and _CAP_MAX.
+
+As part of this change, the behavior is modified such that reading both
+_CAP_MIN and _CAP_MAX registers is now required to succeed, otherwise
+bl->max value could end up being not set although
+drm_edp_backlight_probe_max() returned success.
+
+This ensures correct handling of eDP panels that report a zero PWM
+bit count but still provide valid non-zero MIN and MAX capability
+values. Without this clamping, brightness values may be interpreted
+incorrectly, leading to a dim or non-functional backlight.
+
+For example, the Samsung ATNA40YK20 OLED panel used in the Lenovo
+ThinkPad T14s Gen6 (Snapdragon) reports a PWM bit count of 0, but
+supports AUX backlight control and declares a valid 11-bit range.
+Clamping ensures brightness scaling works as intended on such panels.
+
+Co-developed-by: Rui Miguel Silva <rui.silva@linaro.org>
+Signed-off-by: Rui Miguel Silva <rui.silva@linaro.org>
+Signed-off-by: Christopher Obbard <christopher.obbard@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Tested-by: Christopher Obbard <christopher.obbard@linaro.org>
+Reviewed-by: Christopher Obbard <christopher.obbard@linaro.org>
+Link: https://patch.msgid.link/20250814-topic-x1e80100-t14s-oled-dp-brightness-v7-1-b3d7b4dfe8c5@linaro.org
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/gpu/drm/display/drm_dp_helper.c | 68 ++++++++++++++++++-------
+ 1 file changed, 49 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/gpu/drm/display/drm_dp_helper.c b/drivers/gpu/drm/display/drm_dp_helper.c
+index 4aaeae4fa03c36..d1077f8c0d6e9c 100644
+--- a/drivers/gpu/drm/display/drm_dp_helper.c
++++ b/drivers/gpu/drm/display/drm_dp_helper.c
+@@ -29,6 +29,7 @@
+ #include <linux/init.h>
+ #include <linux/iopoll.h>
+ #include <linux/kernel.h>
++#include <linux/minmax.h>
+ #include <linux/module.h>
+ #include <linux/sched.h>
+ #include <linux/seq_file.h>
+@@ -4128,22 +4129,61 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ {
+ 	int fxp, fxp_min, fxp_max, fxp_actual, f = 1;
+ 	int ret;
+-	u8 pn, pn_min, pn_max;
++	u8 pn, pn_min, pn_max, bit_count;
+ 
+ 	if (!bl->aux_set)
+ 		return 0;
+ 
+-	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT, &pn);
++	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT, &bit_count);
+ 	if (ret < 0) {
+ 		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap: %d\n",
+ 			    aux->name, ret);
+ 		return -ENODEV;
+ 	}
+ 
+-	pn &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
++	bit_count &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
++
++	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MIN, &pn_min);
++	if (ret < 0) {
++		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap min: %d\n",
++			    aux->name, ret);
++		return -ENODEV;
++	}
++	pn_min &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
++
++	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MAX, &pn_max);
++	if (ret < 0) {
++		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap max: %d\n",
++			    aux->name, ret);
++		return -ENODEV;
++	}
++	pn_max &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
++
++	if (unlikely(pn_min > pn_max)) {
++		drm_dbg_kms(aux->drm_dev, "%s: Invalid pwmgen bit count cap min/max returned: %d %d\n",
++			    aux->name, pn_min, pn_max);
++		return -EINVAL;
++	}
++
++	/*
++	 * Per VESA eDP Spec v1.4b, section 3.3.10.2:
++	 * If DP_EDP_PWMGEN_BIT_COUNT is less than DP_EDP_PWMGEN_BIT_COUNT_CAP_MIN,
++	 * the sink must use the MIN value as the effective PWM bit count.
++	 * Clamp the reported value to the [MIN, MAX] capability range to ensure
++	 * correct brightness scaling on compliant eDP panels.
++	 * Only enable this logic if the [MIN, MAX] range is valid in regard to Spec.
++	 */
++	pn = bit_count;
++	if (bit_count < pn_min)
++		pn = clamp(bit_count, pn_min, pn_max);
++
+ 	bl->max = (1 << pn) - 1;
+-	if (!driver_pwm_freq_hz)
++	if (!driver_pwm_freq_hz) {
++		if (pn != bit_count)
++			goto bit_count_write_back;
++
+ 		return 0;
++	}
+ 
+ 	/*
+ 	 * Set PWM Frequency divider to match desired frequency provided by the driver.
+@@ -4167,21 +4207,6 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 	 * - FxP is within 25% of desired value.
+ 	 *   Note: 25% is arbitrary value and may need some tweak.
+ 	 */
+-	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MIN, &pn_min);
+-	if (ret < 0) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap min: %d\n",
+-			    aux->name, ret);
+-		return 0;
+-	}
+-	ret = drm_dp_dpcd_read_byte(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MAX, &pn_max);
+-	if (ret < 0) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap max: %d\n",
+-			    aux->name, ret);
+-		return 0;
+-	}
+-	pn_min &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
+-	pn_max &= DP_EDP_PWMGEN_BIT_COUNT_MASK;
+-
+ 	/* Ensure frequency is within 25% of desired value */
+ 	fxp_min = DIV_ROUND_CLOSEST(fxp * 3, 4);
+ 	fxp_max = DIV_ROUND_CLOSEST(fxp * 5, 4);
+@@ -4199,12 +4224,17 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 			break;
+ 	}
+ 
++bit_count_write_back:
+ 	ret = drm_dp_dpcd_write_byte(aux, DP_EDP_PWMGEN_BIT_COUNT, pn);
+ 	if (ret < 0) {
+ 		drm_dbg_kms(aux->drm_dev, "%s: Failed to write aux pwmgen bit count: %d\n",
+ 			    aux->name, ret);
+ 		return 0;
+ 	}
++
++	if (!driver_pwm_freq_hz)
++		return 0;
++
+ 	bl->pwmgen_bit_count = pn;
+ 	bl->max = (1 << pn) - 1;
+ 
