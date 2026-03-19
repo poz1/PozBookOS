@@ -5,6 +5,21 @@ Audit of 64 patches in `kernel/linux-x13s/patches/` for the ThinkPad X13s
 
 ---
 
+## Build Toolchain
+
+- **Compiler**: Clang/LLVM with `LLVM=1 LLVM_IAS=1`
+- **Target tuning**: `-mcpu=cortex-x1c` (Clang uses NeoverseV1 scheduling model for X1C performance cores)
+- **LTO**: ThinLTO (`CONFIG_LTO_CLANG_THIN=y`) — whole-program link-time optimization, ~5-12% improvement over non-LTO builds
+- **CFI**: Control Flow Integrity (`CONFIG_CFI_CLANG=y`) — forward-edge control flow protection with <1% overhead on ARM64
+- **Shadow Call Stack**: Enabled (`CONFIG_SHADOW_CALL_STACK=y`) — backward-edge return address protection, near-zero overhead on ARM64
+
+**Why Clang over GCC**: GCC maps all SC8280XP cores (both X1C and A78C) to the
+same `cortexa57` scheduling model. Clang differentiates: `NeoverseV1` for X1C big
+cores and `CortexA57` for A78C little cores. Combined with ThinLTO (not available
+with GCC for the kernel), this yields significantly better codegen for big.LITTLE.
+
+---
+
 ## Hardware Support Status
 
 ### Working
@@ -36,7 +51,7 @@ Audit of 64 patches in `kernel/linux-x13s/patches/` for the ThinkPad X13s
 | 4-lane DisplayPort Alt Mode | Not implemented | Only 2-lane works; limits external display resolution/refresh |
 | Coldplug USB-C orientation detection | Broken | Orientation only detected on hotplug, not at boot |
 | Skin temperature thermal throttling | Not implemented | Chassis temperature is not used as a thermal input; surface can get uncomfortably hot under load |
-| Hardware video decode/encode | WIP firmware only | Requires `qcvss8280.mbn` firmware which is not publicly distributed |
+| Hardware video decode/encode | WIP firmware only | Requires `qcvss8280.mbn` firmware which is not publicly distributed. Iris driver v4 patchset posted upstream March 2026 but not yet merged. |
 | Hibernation | Not supported | ARM64 PSCI limitation; no timeline |
 | TPM | Not supported | Not exposed by firmware |
 | Virtualization (KVM) | Not supported | Firmware does not configure EL2 for Linux |
@@ -110,6 +125,33 @@ only run at boot/shutdown, or are behind static branches.
 
 **The thermal governor change alone (+5-15%) more than recovers the combined
 hardening cost (-3-5%). Net effect is positive.**
+
+### Advanced optimizations (second pass)
+
+| Option | Category | Expected effect | Notes |
+|--------|----------|-----------------|-------|
+| `LTO_CLANG_THIN` | Codegen | +5-12% throughput | Whole-program optimization; increases build time significantly |
+| `CFI_CLANG` | Security | <1% overhead | Forward-edge control flow integrity; requires LTO |
+| `SCHED_EXT` | Scheduler | Enables BPF schedulers | Allows `scx_lavd` for big.LITTLE-aware scheduling; zero overhead when unused |
+| `DAMON` + sub-options | Memory | Reduces memory pressure | Proactive reclaim of cold pages based on data access monitoring |
+| `DAMON_RECLAIM` | Memory | Reduces swap thrash | Reclaims cold pages before memory pressure builds |
+| `DAMON_LRU_SORT` | Memory | Better page aging | Hot/cold page sorting improves LRU decisions |
+| `TCP_CONG_BBR` (default) | Network | Better WiFi throughput | BBR v1 handles loss-based congestion better than CUBIC, especially on WiFi |
+| `ZRAM_MULTI_COMP` | Memory | Better ZRAM efficiency | LZ4 primary (fast) + ZSTD secondary for idle pages (high ratio) |
+| `CRYPTO_ZSTD` + `CRYPTO_LZ4` | Compression | Enables ZRAM/ZSWAP compressors | Required for multi-compression and ZSWAP with ZSTD backend |
+
+### Recommended sysctl tuning (userspace)
+
+These are not kernel config options but recommended runtime parameters for X13s:
+
+```ini
+# /etc/sysctl.d/99-pozbook.conf
+vm.swappiness = 180                  # aggressive ZRAM usage (with ZRAM, >100 is valid)
+vm.watermark_boost_factor = 0        # disable boost for mobile (no NUMA, no THP on ARM64 default)
+vm.page-cluster = 0                  # single-page ZRAM I/O (ZRAM random access is fast)
+net.ipv4.tcp_congestion_control = bbr  # (also set as kernel default)
+net.core.default_qdisc = fq          # required for BBR
+```
 
 ---
 
