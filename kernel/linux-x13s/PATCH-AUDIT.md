@@ -243,3 +243,146 @@ silent recovery makes debugging harder.
 | 0060 | Bluetooth HFP offload refactor | 1 |
 | 0061 | DRM MSM GPU recovery | 1 |
 | 0062-0064 | DTS/clock/PHY misc fixes | 3 |
+
+---
+
+## Config Trim Audit — X13s-Only Optimization
+
+Options currently enabled that are unnecessary for a ThinkPad X13s-only build.
+Organized by impact category. All items are safe to disable unless noted.
+
+### High Impact — Runtime Performance / Battery
+
+These options add measurable CPU or syscall overhead with zero benefit on the
+X13s hardware.
+
+| Option | Current | Action | Expected Gain |
+|--------|---------|--------|---------------|
+| `AUDITSYSCALL` | `=y` | Disable (unless using `auditd`) | 1-3% syscall overhead removed |
+| `AUDIT` | `=y` | Disable (parent of AUDITSYSCALL) | ~30KB + syscall hot-path branch removed |
+| `FRAME_POINTER` | `=y` | Disable | 1-2% CPU (frees a register for codegen) |
+| `SCHED_SMT` | `=y` | Disable | SC8280XP has no SMT/HT — dead scheduling logic |
+| `MPTCP` | `=y` | Disable | TCP stack overhead; unused on laptops |
+| `IP_PNP` | `=y` | Disable | Diskless boot infra, not needed with NVMe |
+| `IP_PNP_DHCP` | `=y` | Disable | Boot-time DHCP probe for diskless boot |
+| `IP_PNP_BOOTP` | `=y` | Disable | Boot-time BOOTP probe for diskless boot |
+
+**Combined estimate: ~3-7% CPU improvement, reduced boot overhead.**
+
+Trade-off: `FRAME_POINTER` removal makes kernel stack traces less reliable.
+`AUDIT` removal means `auditd` cannot be used (irrelevant for a laptop).
+
+### High Impact — Security Surface Reduction
+
+Reducing attack surface also reduces code paths and cache pressure.
+
+| Option | Current | Action | Rationale |
+|--------|---------|--------|-----------|
+| `DEBUG_FS` + `DEBUG_FS_ALLOW_ALL` | `=y` | Switch to `DEBUG_FS_ALLOW_NONE` or disable entirely | Exposes kernel internals; production systems should not mount debugfs. Note: some DRM debug tools will break. |
+| `COMPAT` | `=y` | Disable | Removes entire AArch32 (32-bit ARM) execution support. No 32-bit ARM binaries exist for this platform. Eliminates a large attack surface. |
+| `KUSER_HELPERS` | `=y` | Disable (depends on COMPAT) | 32-bit userspace helper stubs |
+| `CIFS_ALLOW_INSECURE_LEGACY` | `=y` | Disable | Blocks deprecated/insecure SMBv1 protocol |
+| `BLOCK_LEGACY_AUTOLOAD` | `=y` | Disable | Deprecated legacy block device auto-loading |
+
+### Medium Impact — Unnecessary Filesystems
+
+These are all modules (`=m`), so they don't affect boot performance, but they
+add to package size and compile time. Remove unless explicitly needed.
+
+| Option | State | Reason to Drop |
+|--------|-------|----------------|
+| `XFS_FS` (+`XFS_QUOTA`) | `=m` | Server filesystem. ~600KB module. Ext4/F2FS/Btrfs cover laptop use. |
+| `NTFS3_FS` | `=m` | Windows partition access only. ~200KB module. |
+| `ISO9660_FS` | `=m` | CD-ROM filesystem. X13s has no optical drive. ~100KB module. |
+| `UDF_FS` | `=m` | DVD/Blu-ray filesystem. No optical drive. ~150KB module. |
+| `NFS_FS` | `=m` | NFS client. Pulls in SUNRPC/LOCKD chain. ~300KB+ modules. Unlikely on a laptop. |
+| `CIFS` | `=m` | SMB/CIFS. ~600KB module. Use userspace `gvfs-smb` instead if needed. |
+
+**Total savings: ~2MB in modules.**
+
+If `NFS_FS` and `CIFS` are removed, also remove their dependencies:
+`DNS_RESOLVER`, `CRYPTO_MD5`, `CRYPTO_LIB_DES`.
+
+### Medium Impact — Unnecessary Network Protocols
+
+| Option | State | Reason to Drop |
+|--------|-------|----------------|
+| `IPV6_SIT` | `=m` | 6to4 tunneling, deprecated per RFC 7526 |
+| `BRIDGE` | `=m` | Only for VMs/containers with bridged networking |
+| `VLAN_8021Q` | `=m` | Enterprise VLAN tagging. Not needed on a laptop. |
+| `NF_CT_PROTO_SCTP` | `=y` | SCTP connection tracking. Telecoms protocol. |
+| `NF_CT_PROTO_UDPLITE` | `=y` | UDPLite connection tracking. Extremely niche. |
+
+### Medium Impact — Wrong-Device / Unused Drivers
+
+| Option | State | Reason to Drop |
+|--------|-------|----------------|
+| `ARM_SCMI_CPUFREQ` | `=y` | X13s uses `QCOM_CPUFREQ_HW`, not SCMI for cpufreq. ~10KB built-in. |
+| `ARM_SBSA_WATCHDOG` | `=y` | Server-class SBSA watchdog. X13s has `QCOM_WDT`. ~10KB built-in. |
+| `EC_LENOVO_THINKPAD_T14S` | `=m` | Wrong device — T14s Gen 6 (Snapdragon X Elite), not X13s. ~10KB module. |
+| `SND_SOC_WSA884X` | `=m` | Wrong amplifier — X13s uses WSA883X. ~30KB module. |
+| `INPUT_TOUCHSCREEN` | `=y` | X13s has no touchscreen. ~5KB subsystem overhead. |
+| `I2C_HID_OF_ELAN` | `=m` | Elan-specific I2C HID. X13s trackpad uses standard HID-over-I2C. Test without. |
+| WWAN (`MHI_WWAN_CTRL`, `MHI_WWAN_MBIM`, `WWAN`) | `=m` | Only needed if your SKU has the optional 5G modem. ~100KB modules. |
+
+### Medium Impact — Unnecessary Crypto
+
+| Option | State | Reason to Drop |
+|--------|-------|----------------|
+| `CRYPTO_MICHAEL_MIC` | `=m` | WPA1/TKIP — dead protocol. |
+| `CRYPTO_LIB_SM3` | `=m` | Chinese ShangMi 3 hash. Nothing on X13s uses it. |
+| `CRYPTO_AES_ARM64_NEON_BLK` | `=m` | NEON AES fallback. SC8280XP always has Crypto Extensions; CE path is always preferred. |
+| `CRYPTO_AES_ARM64_BS` | `=m` | Bitsliced AES fallback. Same — CE is always available. |
+| `CRYPTO_USER_API_HASH` | `=m` | AF_ALG userspace hash API. OpenSSL has its own crypto; this is redundant. |
+| `CRYPTO_USER_API_SKCIPHER` | `=m` | AF_ALG userspace cipher API. Same reasoning. |
+
+### Low Impact — Debug/Trace Bloat
+
+| Option | Current | Action | Savings |
+|--------|---------|--------|---------|
+| `KALLSYMS_ALL` | `=y` | Downgrade to `KALLSYMS` (without `_ALL`) | 1-2MB vmlinux |
+| `IKCONFIG` + `IKCONFIG_PROC` | `=y` | Disable | ~50KB (embeds entire .config in kernel) |
+| `RCU_TRACE` | `=y` | Disable | Tracepoints in hot RCU paths |
+| `THERMAL_EMULATION` | `=y` | Disable | Fake thermal zones for testing. ~5KB. |
+
+### Low Impact — Unused Decompressors
+
+These are built-in but not used by any configured initramfs format (`RD_BZIP2`,
+`RD_LZMA`, `RD_LZO`, `RD_LZ4` are all disabled).
+
+| Option | Savings |
+|--------|---------|
+| `DECOMPRESS_BZIP2` | ~20KB |
+| `DECOMPRESS_LZMA` | ~15KB |
+| `DECOMPRESS_LZO` | ~10KB |
+| `DECOMPRESS_LZ4` | ~10KB |
+| `LZ4HC_COMPRESS` | ~15KB module |
+
+### Low Impact — Misc
+
+| Option | State | Reason to Drop |
+|--------|-------|----------------|
+| `FB_EFI` | `=y` | EFI framebuffer. `DRM_SIMPLEDRM` already handles early display via EFI GOP. Redundant. ~20KB. |
+| `CEC_CORE` | `=m` | HDMI CEC (TV remote control). X13s eDP panel does not use CEC. ~50KB module. |
+| `SND_RAWMIDI` | `=m` | Raw MIDI. Not needed unless using MIDI instruments. ~30KB module. |
+| `SND_UMP` | `=m` | MIDI 2.0 Universal MIDI Packet. Same. ~20KB module. |
+| `CPU_FREQ_GOV_PERFORMANCE` | `=m` | Redundant — `schedutil` is the default and optimal governor. |
+| `CPU_FREQ_GOV_POWERSAVE` | `=m` | Same — `schedutil` handles everything. |
+| `BINFMT_MISC` | `=m` | Misc binary formats (Wine, QEMU user-mode). Drop if not needed. |
+| `SQUASHFS_LZO` | `=y` | SquashFS LZO decompression. Rarely used; ZSTD/XZ/ZLIB cover everything. |
+| `SQUASHFS_LZ4` | `=y` | SquashFS LZ4 decompression. Same. |
+| `HIBERNATION_SNAPSHOT_DEV` | `=y` | Hibernate snapshot device. Hibernation itself is disabled on ARM64. |
+
+### Summary
+
+| Category | Est. Performance | Est. Size Savings |
+|----------|-----------------|-------------------|
+| Runtime (audit, frame pointer, SMT, MPTCP) | +3-7% CPU | — |
+| Security surface (debugfs, compat, SMBv1) | Indirect (less code) | ~50KB built-in |
+| Unused filesystems | — | ~2MB modules |
+| Wrong-device drivers | — | ~150KB modules |
+| Unused crypto | — | ~80KB modules |
+| Debug/trace trim | Minor | ~1-2MB vmlinux |
+| Unused decompressors | — | ~70KB built-in |
+| Misc | — | ~200KB modules |
+| **Total** | **~3-7% CPU** | **~3-5MB image + modules** |

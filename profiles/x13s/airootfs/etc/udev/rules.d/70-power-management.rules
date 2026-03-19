@@ -1,8 +1,12 @@
-# USB: enable autosuspend for all USB devices (2 second delay)
-ACTION=="add", SUBSYSTEM=="usb", ATTR{power/autosuspend_delay_ms}="2000", ATTR{power/control}="auto"
+# USB: enable autosuspend for all USB devices (500ms delay for mobile efficiency)
+ACTION=="add", SUBSYSTEM=="usb", ATTR{power/autosuspend_delay_ms}="500", ATTR{power/control}="auto"
 
 # USB: disable wakeup from internal USB hubs to prevent spurious resume from s2idle
 ACTION=="add", SUBSYSTEM=="usb", ATTR{power/wakeup}="disabled"
 
 # PCI: enable runtime PM for all PCI devices
 ACTION=="add", SUBSYSTEM=="pci", ATTR{power/control}="auto"
+
+# PCIe ASPM: enforce L1 and clock PM on all PCIe devices (WiFi, NVMe, USB-C PHY)
+ACTION=="add", SUBSYSTEM=="pci", ATTR{link/l1_aspm}="1"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{link/clkpm}="1"

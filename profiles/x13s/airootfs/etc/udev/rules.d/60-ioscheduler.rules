@@ -3,3 +3,9 @@ ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/scheduler}="none"
 
 # SD/eMMC: use BFQ for per-process fairness on slow flash media
 ACTION=="add|change", KERNEL=="mmcblk[0-9]*", ATTR{queue/scheduler}="bfq"
+
+# Loop devices: no scheduler needed (backing device handles it)
+ACTION=="add|change", KERNEL=="loop[0-9]*", ATTR{queue/scheduler}="none"
+
+# Device-mapper (dm-crypt, LVM): no scheduler (stacked on real device)
+ACTION=="add|change", KERNEL=="dm-[0-9]*", ATTR{queue/scheduler}="none"

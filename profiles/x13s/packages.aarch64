@@ -1,105 +1,175 @@
-# TODO: might need archlinuxarm-keyring and archlinux-keyring (note that archlinux-keyring has never existed in the x86_64 iso installer)
-alsa-utils
-arch-install-scripts
-archinstall
-archlinuxarm-keyring
+# --- Base system ---
 base
-bind-tools
-brltty
-btrfs-progs
-clonezilla
-cryptsetup
-darkhttpd
-ddrescue
-dhclient
-dhcpcd
-diffutils
-dnsmasq
-dosfstools
-e2fsprogs
-efibootmgr
-erofs-utils
-espeakup
-ethtool
-exfatprogs
-f2fs-tools
-fatresize
-fsarchiver
-openbsd-netcat
-gpart
-gptfdisk
-grml-zsh-config
-irssi
-iw
-iwd
-jfsutils
-kitty-terminfo
-less
-lftp
-libfido2
-libusb-compat
 linux-firmware
 linux-firmware-qcom
-lsscsi
-lvm2
-lynx
-man-db
-man-pages
-mc
-mdadm
+archlinuxarm-keyring
+sudo
+efibootmgr
+
+# --- Installer ---
+arch-install-scripts
+archinstall
 mkinitcpio
 mkinitcpio-archiso
-mkinitcpio-nfs-utils
-modemmanager
-mtools
+
+# --- Shell & terminal ---
+zsh
+grml-zsh-config
+tmux
+less
+man-db
+man-pages
 nano
-nbd
-ndisc6
-nfs-utils
-nilfs-utils
-nmap
+vim
+
+# --- Filesystem tools ---
+btrfs-progs
+cryptsetup
+dosfstools
+e2fsprogs
+exfatprogs
+f2fs-tools
+gptfdisk
+lvm2
 ntfs-3g
+parted
+
+# --- Disk utilities ---
 nvme-cli
+smartmontools
+
+# --- Networking ---
+dhcpcd
+ethtool
+iw
+iwd
+modemmanager
+ndisc6
+openbsd-netcat
 openconnect
 openssh
 openvpn
-partclone
-parted
-partimage
+systemd-resolvconf
+wireless-regdb
+bind-tools
+nmap
+tcpdump
+
+# --- Bluetooth ---
+bluez
+bluez-utils
+blueman
+
+# --- Audio ---
+alsa-utils
+alsa-ucm-conf
+pipewire
+pipewire-pulse
+wireplumber
+
+# --- GPU (Adreno 690 / freedreno + turnip) ---
+mesa
+vulkan-freedreno
+vulkan-icd-loader
+
+# --- Hardware & USB ---
+brltty
+espeakup
+libfido2
 pcsclite
-ppp
 pv
 rsync
-rxvt-unicode-terminfo
-screen
-sdparm
-sg3_utils
-smartmontools
-squashfs-tools
-sudo
-systemd-resolvconf
-tcpdump
 terminus-font
-testdisk
-tmux
-tpm2-tss
-udftools
 usb_modeswitch
-usbmuxd
 usbutils
-vim
-vpnc
-wireless-regdb
-wireless_tools
-xfsprogs
-zsh
+diffutils
+brightnessctl
 
-# Custom Packages go here
+# --- Sway desktop (Wayland tiling WM) ---
+sway
+swayidle
+swaylock
+swaybg
+waybar
+wofi
+mako
+grim
+slurp
+wl-clipboard
+cliphist
+xdg-utils
+xdg-desktop-portal
+xdg-desktop-portal-wlr
+xdg-desktop-portal-gtk
+foot
+playerctl
+xorg-xwayland
+polkit-gnome
+
+# --- Fonts ---
+ttf-dejavu
+noto-fonts
+noto-fonts-emoji
+otf-font-awesome
+
+# --- Browser ---
+firefox
+
+# --- File manager ---
+mc
+thunar
+gvfs
+
+# --- Viewers ---
+zathura
+zathura-pdf-mupdf
+imv
+
+# --- Dev tools ---
+git
+base-devel
+strace
+
+# --- Container runtime (Podman 5.x) ---
+podman
+buildah
+crun
+slirp4netns
+fuse-overlayfs
+passt
+netavark
+aardvark-dns
+iptables-nft
+
+# --- CLI tools ---
+curl
+wget
+btop
+jq
+ripgrep
+fd
+bat
+eza
+fzf
+ncdu
+zstd
+tealdeer
+unzip
+
+# --- Custom X13s packages ---
 linux-x13s
 zram-generator
 
-# Performance & power management
+# --- Performance & power management ---
 irqbalance
 powertop
-fwupd
 earlyoom
+
+# --- Security (AppArmor — kernel has CONFIG_SECURITY_APPARMOR=y, this adds userspace) ---
+apparmor
+
+# sched_ext BPF schedulers for big.LITTLE (AUR scx-scheds-git supports aarch64)
+# scx_lavd confirmed working on aarch64 after PR #3193 (Jan 2026)
+# Open issue: #3373 vmlinux.h include path ordering on ARM64 (workaround exists)
+# TODO: build scx-scheds-git for aarch64 and add to ironrobin-x13s repo
+# scx-scheds
