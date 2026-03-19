@@ -1,0 +1,33 @@
+name: Build ISO
+
+on:
+  workflow_dispatch: {}
+  workflow_run:
+    workflows: ["Build kernel package"]
+    types: [completed]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    container:
+      image: menci/archlinuxarm:latest
+    steps:
+      - name: Init pacman keyring
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinuxarm
+
+      - name: Install archiso
+        run: pacman -Syu --noconfirm archiso
+
+      - uses: actions/checkout@v4
+
+      - name: Build ISO
+        run: mkarchiso -v profiles/x13s
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: archlinux-x13s
+          path: out/*.iso

@@ -40,7 +40,6 @@ libfido2
 libusb-compat
 linux-firmware
 linux-firmware-qcom
-livecd-sounds
 lsscsi
 lvm2
 lynx

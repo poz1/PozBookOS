@@ -1,0 +1,36 @@
+name: Build kernel package
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "kernel/linux-x13s/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: menci/archlinuxarm:latest
+    steps:
+      - name: Init pacman keyring
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinuxarm
+
+      - name: Install build dependencies
+        run: pacman -Syu --noconfirm base-devel xmlto docbook-xsl kmod inetutils bc git uboot-tools dtc
+
+      - uses: actions/checkout@v4
+
+      - name: Build kernel package
+        run: |
+          useradd -m builder
+          chown -R builder: kernel/linux-x13s
+          cd kernel/linux-x13s
+          su builder -c 'makepkg -s --noconfirm'
+
+      - name: Upload kernel package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x13s
+          path: kernel/linux-x13s/*.pkg.tar.*
