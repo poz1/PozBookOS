@@ -2,6 +2,7 @@ name: Build kernel package
 
 on:
   workflow_dispatch: {}
+  workflow_call: {}
   push:
     paths:
       - "kernel/linux-x13s/**"

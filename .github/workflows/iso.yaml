@@ -1,15 +1,27 @@
 name: Build ISO
 
 on:
-  workflow_dispatch: {}
-  workflow_run:
-    workflows: ["Build kernel package"]
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      withKernel:
+        description: "Build kernel from source (true) or use latest kernel artifact (false)"
+        required: true
+        default: "false"
+        type: boolean
+  push:
+    paths:
+      - "profiles/x13s/**"
+      - ".github/workflows/iso.yaml"
 
 jobs:
+  kernel:
+    if: ${{ github.event.inputs.withKernel == 'true' }}
+    uses: ./.github/workflows/kernel.yaml
+
   build:
     runs-on: ubuntu-24.04-arm
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: [kernel]
+    if: ${{ always() && (needs.kernel.result == 'success' || needs.kernel.result == 'skipped') }}
     container:
       image: menci/archlinuxarm:latest
     steps:
@@ -22,6 +34,26 @@ jobs:
         run: pacman -Syu --noconfirm archiso
 
       - uses: actions/checkout@v4
+
+      - name: Download kernel artifact (from this run)
+        if: ${{ needs.kernel.result == 'success' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x13s
+          path: /tmp/kernel-pkg
+
+      - name: Download latest kernel artifact (from previous run)
+        if: ${{ needs.kernel.result == 'skipped' }}
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: kernel.yaml
+          name: linux-x13s
+          path: /tmp/kernel-pkg
+
+      - name: Inject kernel package into local repo
+        run: |
+          repo-add /tmp/kernel-pkg/linux-x13s.db.tar.gz /tmp/kernel-pkg/*.pkg.tar.*
+          printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' >> profiles/x13s/pacman.conf
 
       - name: Build ISO
         run: mkarchiso -v profiles/x13s
