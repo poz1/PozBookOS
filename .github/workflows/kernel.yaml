@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "kernel/linux-x13s/**"
+      - ".github/workflows/kernel.yaml"
 
 jobs:
   build:
@@ -18,7 +19,7 @@ jobs:
           pacman-key --populate archlinuxarm
 
       - name: Install build dependencies
-        run: pacman -Syu --noconfirm base-devel xmlto docbook-xsl kmod inetutils bc git uboot-tools dtc
+        run: pacman -Syu --noconfirm base-devel xmlto docbook-xsl kmod inetutils bc git uboot-tools dtc perl python openssl libelf clang llvm lld
 
       - uses: actions/checkout@v4
 
@@ -27,7 +28,7 @@ jobs:
           useradd -m builder
           chown -R builder: kernel/linux-x13s
           cd kernel/linux-x13s
-          su builder -c 'makepkg -s --noconfirm'
+          su builder -c 'makepkg --noconfirm'
 
       - name: Upload kernel package
         uses: actions/upload-artifact@v4
