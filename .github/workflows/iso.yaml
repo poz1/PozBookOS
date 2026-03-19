@@ -31,7 +31,11 @@ jobs:
           pacman-key --populate archlinuxarm
 
       - name: Install archiso
-        run: pacman -Syu --noconfirm archiso
+        run: |
+          pacman -Syu --noconfirm
+          # archiso is arch=any (shell scripts only) but not in ALARM repos — fetch from official Arch mirrors
+          curl -LO "https://archlinux.org/packages/extra/any/archiso/download/"
+          pacman -U --noconfirm archiso-*.pkg.tar.zst
 
       - uses: actions/checkout@v4
 
