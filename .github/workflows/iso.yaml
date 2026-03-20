@@ -24,6 +24,7 @@ jobs:
     if: ${{ always() && (needs.kernel.result == 'success' || needs.kernel.result == 'skipped') }}
     container:
       image: menci/archlinuxarm:latest
+      options: --privileged
     steps:
       - name: Init pacman keyring
         run: |
