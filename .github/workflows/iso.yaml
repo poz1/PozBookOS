@@ -33,6 +33,9 @@ jobs:
           grep -q '^DisableSandbox' /etc/pacman.conf || echo 'DisableSandbox' >> /etc/pacman.conf
           pacman-key --init
           pacman-key --populate archlinuxarm
+          # Trust ironrobin-x13s repo signing key
+          pacman-key --recv-keys 6ED02751500A833A
+          pacman-key --lsign-key 6ED02751500A833A
 
       - name: Install archiso
         run: |
@@ -64,7 +67,11 @@ jobs:
           printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' >> profiles/x13s/pacman.conf
 
       - name: Build ISO
-        run: mkarchiso -v profiles/x13s
+        run: |
+          # Disable Landlock sandbox in profile pacman.conf (used by pacstrap inside mkarchiso)
+          sed -i 's/^#\?DisableSandbox/DisableSandbox/' profiles/x13s/pacman.conf
+          grep -q '^DisableSandbox' profiles/x13s/pacman.conf || sed -i '/^ParallelDownloads/a DisableSandbox' profiles/x13s/pacman.conf
+          mkarchiso -v profiles/x13s
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
