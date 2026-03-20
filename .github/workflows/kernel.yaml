@@ -12,30 +12,18 @@ jobs:
   build:
     runs-on: ubuntu-24.04-arm
     container:
-      image: menci/archlinuxarm:latest
+      image: ghcr.io/poz1/pozbookos/alarm-ci:latest
     steps:
-      - name: Init pacman keyring
-        run: |
-          # Disable pacman download sandbox — Landlock not available in GitHub Actions containers
-          sed -i 's/^#\?DisableSandbox/DisableSandbox/' /etc/pacman.conf
-          grep -q '^DisableSandbox' /etc/pacman.conf || echo 'DisableSandbox' >> /etc/pacman.conf
-          pacman-key --init
-          pacman-key --populate archlinuxarm
-
-      - name: Install build dependencies
-        run: pacman -Syu --noconfirm base-devel xmlto docbook-xsl kmod inetutils bc git uboot-tools dtc perl python openssl libelf clang llvm lld
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build kernel package
         run: |
-          useradd -m builder
           chown -R builder: kernel/linux-x13s
           cd kernel/linux-x13s
           su builder -c 'makepkg --noconfirm'
 
       - name: Upload kernel package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x13s
           path: kernel/linux-x13s/*.pkg.tar.*

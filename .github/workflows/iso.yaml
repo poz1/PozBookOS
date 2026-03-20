@@ -18,48 +18,45 @@ jobs:
     if: ${{ github.event.inputs.withKernel == 'true' }}
     uses: ./.github/workflows/kernel.yaml
 
+  find-kernel-run:
+    if: ${{ github.event.inputs.withKernel != 'true' }}
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      run-id: ${{ steps.lookup.outputs.run-id }}
+    steps:
+      - name: Find latest successful kernel run
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list -R "$GITHUB_REPOSITORY" -w kernel.yaml -s success -L 1 --json databaseId -q '.[0].databaseId')
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
   build:
     runs-on: ubuntu-24.04-arm
-    needs: [kernel]
-    if: ${{ always() && (needs.kernel.result == 'success' || needs.kernel.result == 'skipped') }}
+    needs: [kernel, find-kernel-run]
+    if: ${{ always() && (needs.kernel.result == 'success' || needs.find-kernel-run.result == 'success') }}
     container:
-      image: menci/archlinuxarm:latest
+      image: ghcr.io/poz1/pozbookos/alarm-ci:latest
       options: --privileged
     steps:
-      - name: Init pacman keyring
-        run: |
-          # Disable pacman download sandbox — Landlock not available in GitHub Actions containers
-          sed -i 's/^#\?DisableSandbox/DisableSandbox/' /etc/pacman.conf
-          grep -q '^DisableSandbox' /etc/pacman.conf || echo 'DisableSandbox' >> /etc/pacman.conf
-          pacman-key --init
-          pacman-key --populate archlinuxarm
-          # Trust ironrobin-x13s repo signing key
-          pacman-key --recv-keys 6ED02751500A833A
-          pacman-key --lsign-key 6ED02751500A833A
-
-      - name: Install archiso
-        run: |
-          pacman -Syu --noconfirm
-          # archiso is arch=any (shell scripts only) but not in ALARM repos — fetch from official Arch mirrors
-          curl -Lo /tmp/archiso.pkg.tar.zst "https://archlinux.org/packages/extra/any/archiso/download/"
-          pacman -U --noconfirm /tmp/archiso.pkg.tar.zst
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download kernel artifact (from this run)
         if: ${{ needs.kernel.result == 'success' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-x13s
           path: /tmp/kernel-pkg
 
       - name: Download latest kernel artifact (from previous run)
-        if: ${{ needs.kernel.result == 'skipped' }}
-        uses: dawidd6/action-download-artifact@v6
+        if: ${{ needs.find-kernel-run.result == 'success' }}
+        uses: actions/download-artifact@v8
         with:
-          workflow: kernel.yaml
           name: linux-x13s
           path: /tmp/kernel-pkg
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.find-kernel-run.outputs.run-id }}
 
       - name: Inject kernel package into local repo
         run: |
@@ -74,7 +71,7 @@ jobs:
           mkarchiso -v profiles/x13s
 
       - name: Upload ISO
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: archlinux-x13s
           path: out/*.iso
