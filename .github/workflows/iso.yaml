@@ -60,7 +60,7 @@ jobs:
 
       - name: Inject kernel package into local repo
         run: |
-          repo-add /tmp/kernel-pkg/linux-x13s.db.tar.gz /tmp/kernel-pkg/*.pkg.tar.*
+          repo-add /tmp/kernel-pkg/linux-x13s-local.db.tar.gz /tmp/kernel-pkg/*.pkg.tar.*
           printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' >> profiles/x13s/pacman.conf
 
       - name: Build ISO
