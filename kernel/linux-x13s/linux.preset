@@ -1,0 +1,10 @@
+# mkinitcpio preset file for the '%PKGBASE%' package
+
+ALL_config="/etc/mkinitcpio.conf.d/x13s.conf"
+ALL_kver="%KERNVER%"
+
+PRESETS=('default')
+
+#default_config="/etc/mkinitcpio.conf"
+default_image="/boot/initramfs-linux-x13s.img"
+#default_options=""

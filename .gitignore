@@ -5,3 +5,7 @@ out/
 *.iso
 user-data
 meta-data
+kernel/*/src/
+kernel/*/pkg/
+kernel/*/*.tar.*
+kernel/*/*.log

@@ -1,0 +1,46 @@
+name: Build CI container
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [aarch64]
+    paths:
+      - "container/**"
+      - ".github/workflows/container.yaml"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download ALARM rootfs tarball
+        run: curl -Lo container/ArchLinuxARM-aarch64-latest.tar.gz http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}/alarm-ci
+          tags: |
+            type=raw,value=latest
+            type=raw,value={{date 'YYYY-MM-DD'}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: container
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

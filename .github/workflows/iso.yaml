@@ -1,0 +1,77 @@
+name: Build ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      withKernel:
+        description: "Build kernel from source (true) or use latest kernel artifact (false)"
+        required: true
+        default: "false"
+        type: boolean
+  push:
+    paths:
+      - "profiles/x13s/**"
+      - ".github/workflows/iso.yaml"
+
+jobs:
+  kernel:
+    if: ${{ github.event.inputs.withKernel == 'true' }}
+    uses: ./.github/workflows/kernel.yaml
+
+  find-kernel-run:
+    if: ${{ github.event.inputs.withKernel != 'true' }}
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      run-id: ${{ steps.lookup.outputs.run-id }}
+    steps:
+      - name: Find latest successful kernel run
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list -R "$GITHUB_REPOSITORY" -w kernel.yaml -s success -L 1 --json databaseId -q '.[0].databaseId')
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
+  build:
+    runs-on: ubuntu-24.04-arm
+    needs: [kernel, find-kernel-run]
+    if: ${{ always() && (needs.kernel.result == 'success' || needs.find-kernel-run.result == 'success') }}
+    container:
+      image: ghcr.io/poz1/pozbookos/alarm-ci:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download kernel artifact (from this run)
+        if: ${{ needs.kernel.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-x13s
+          path: /tmp/kernel-pkg
+
+      - name: Download latest kernel artifact (from previous run)
+        if: ${{ needs.find-kernel-run.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-x13s
+          path: /tmp/kernel-pkg
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.find-kernel-run.outputs.run-id }}
+
+      - name: Inject kernel package into local repo
+        run: |
+          repo-add /tmp/kernel-pkg/linux-x13s-local.db.tar.gz /tmp/kernel-pkg/*.pkg.tar.*
+          printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' >> profiles/x13s/pacman.conf
+
+      - name: Build ISO
+        run: |
+          # Disable Landlock sandbox in profile pacman.conf (used by pacstrap inside mkarchiso)
+          sed -i 's/^#\?DisableSandbox/DisableSandbox/' profiles/x13s/pacman.conf
+          grep -q '^DisableSandbox' profiles/x13s/pacman.conf || sed -i '/^ParallelDownloads/a DisableSandbox' profiles/x13s/pacman.conf
+          mkarchiso -v profiles/x13s
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v7
+        with:
+          name: archlinux-x13s
+          path: out/*.iso

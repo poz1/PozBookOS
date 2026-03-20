@@ -1,41 +1,66 @@
-# archiso for Lenovo ThinkPad X13s
+# PozBookOS
 
-This repository contains a customized archiso preset for building images for the ThinkPad X13s ARM laptop. Pre-built images are available in [Releases](https://github.com/ironrobin/archiso-x13s/releases). These images use a [custom kernel](https://github.com/ironrobin/x13s-alarm/tree/trunk/linux-x13s-archiso)/[firmware](https://github.com/ironrobin/x13s-alarm/tree/trunk/x13s-firmware) to make the iso work reliably. 
+Arch Linux ARM distribution optimized for the Lenovo ThinkPad X13s (Snapdragon 8cx Gen 3 / SC8280XP). Ships a custom kernel built with Clang/LLVM ThinLTO, a Sway desktop, and system-level tuning for ARM big.LITTLE on a laptop.
 
-X13s specific packages can be found [here](https://github.com/ironrobin/x13s-alarm/releases/tag/packages).
+## Kernel
+
+Based on Linux 6.18.12 stable with 64 patches from [steev's X13s branch](https://github.com/steev/linux/tree/lenovo-x13s-linux-6.18.y).
+
+| Feature | Detail |
+|---|---|
+| Compiler | Clang/LLVM with `-mcpu=cortex-x1c` tuning |
+| ThinLTO | Whole-program link-time optimization (+5-12% throughput) |
+| CFI | Clang Control Flow Integrity (forward-edge protection) |
+| Shadow Call Stack | Return address protection (ARM64 hardware-backed) |
+| sched_ext | BPF scheduler extensions for big.LITTLE-aware scheduling |
+| DAMON | Data Access Monitoring with proactive reclaim and LRU sort |
+| MGLRU | Multi-Gen LRU page replacement |
+| Lazy preemption | Better throughput with comparable interactivity |
+| ZRAM | LZ4 primary + ZSTD secondary multi-comp, 50% of RAM |
+| Thermal governor | power_allocator PID controller (+5-15% sustained perf) |
+| BBR + fq | TCP congestion control optimized for WiFi |
+| PCIe ASPM | Power supersave for NVMe and WiFi |
+| CPU idle | TEO governor for deeper C-states |
+| NUMA disabled | Removed — SC8280XP is UMA (saves per-CPU overhead) |
+| NR_CPUS=8 | Exact core count instead of default 512 |
+| Module compression | ZSTD-compressed modules (~100-300 MB disk savings) |
+
+Required boot parameters: `clk_ignore_unused pd_ignore_unused arm64.nopauth efi=noruntime`
+
+## Image
+
+Live/installer ISO with Sway/Wayland desktop. SquashFS compressed with zstd level 19.
+
+| Feature | Detail |
+|---|---|
+| Desktop | Sway + Waybar + foot + wofi + mako |
+| Browser | Firefox |
+| Audio | PipeWire + WirePlumber with codec power-save |
+| GPU | Mesa/Turnip Vulkan 1.3 (Adreno 690) |
+| WiFi | iwd with 5/6 GHz band preference and roam tuning |
+| Networking | systemd-networkd, BBR, TCP Fast Open, WiFi buffer tuning |
+| Memory | ZRAM (LZ4+ZSTD), MGLRU, DAMON reclaim, 64KB mTHP |
+| I/O scheduler | none for NVMe, BFQ for eMMC |
+| Containers | Podman 5.x + Buildah (rootless) |
+| Security | AppArmor, restricted unprivileged BPF/userfaultfd |
+| Power | irqbalance, powertop, timer migration disabled, WiFi PS |
+| OOM protection | earlyoom |
+| Module blacklist | Unused x86 drivers stripped (i915, amdgpu, iwlwifi, etc.) |
+| CLI tools | bat, eza, fd, fzf, ripgrep, btop, jq, ncdu |
+| Filesystem | btrfs, f2fs, LUKS, LVM, exFAT, NTFS |
 
 ## Boot instructions
-1. Download the latest Pre-built image
-2. Flash to a USB `dd bs=4M if=archlinuxarm-YYYY.MM.DD-aarch64.iso of=<DEV-TARGET> conv=fsync oflag=direct status=progress`
-3. Reboot the laptop, and press F12 when the Lenovo logo appears
-4. Select the USB to boot
 
-## Installation
-The instructions in the [Installation_guide](https://wiki.archlinux.org/title/Installation_guide) mostly apply, however there are some things specific to the X13s to be aware of:
+1. Download the ISO from [Releases](https://github.com/poz1/PozBookOS/releases)
+2. Flash to USB: `dd bs=4M if=archlinux-x13s-*.iso of=/dev/sdX conv=fsync oflag=direct status=progress`
+3. Reboot, press F12 at the Lenovo logo, select USB
 
- * The internal drive is `/dev/nvme0n1`, and USB storage will be `/dev/sdX`.
- * The X13s ships with an existing EFI system partition on the internal drive that you can use `/dev/nvme0n1p1`.
- * Currently, the regular `linux-aarch64` and `linux-aarch64-rc` kernels don't work, until this is sorted out you can use the `ironrobin-x13s` repository and install `linux-x13s` from it.
- * The `ironrobin-x13s` repo will be missing from the target system's `pacman.conf`, make sure to edit it and add this if you want to use X13s packages
-```
-[ironrobin-x13s]
-Server = https://github.com/ironrobin/x13s-alarm/releases/download/packages
-```
-OR
-```
-[ironrobin-volterra]
-Server = https://github.com/ironrobin/volterra-alarm/releases/download/packages
-```
+## Credits
 
-You'll need to trust the public key in order to verify package signature:
-
-```bash
-sudo pacman-key --recv-keys 6ED02751500A833A
-sudo pacman-key --lsign-key 6ED02751500A833A
-```
-
-If this project helped you, you can buy me a cup of coffee :)
-<br/><br/>
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/theironrobin)
-<br/><br/>
-DOGE address: DRUZaJueWL3G7Y6d9MSBx23vcVcbuQ9kQQ
+| Project | Link |
+|---|---|
+| Arch Linux ARM | https://archlinuxarm.org |
+| steev's X13s kernel | https://github.com/steev/linux/tree/lenovo-x13s-linux-6.18.y |
+| ironrobin's X13s packages | https://github.com/ironrobin/x13s-alarm |
+| Linux stable | https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git |
+| Arch Linux archiso | https://gitlab.archlinux.org/archlinux/archiso |

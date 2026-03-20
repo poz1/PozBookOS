@@ -1,0 +1,29 @@
+name: Build kernel package
+
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    paths:
+      - "kernel/linux-x13s/**"
+      - ".github/workflows/kernel.yaml"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/poz1/pozbookos/alarm-ci:latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build kernel package
+        run: |
+          chown -R builder: kernel/linux-x13s
+          cd kernel/linux-x13s
+          su builder -c 'makepkg --noconfirm'
+
+      - name: Upload kernel package
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-x13s
+          path: kernel/linux-x13s/*.pkg.tar.*
