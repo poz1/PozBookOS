@@ -3,7 +3,6 @@ name: Build CI container
 on:
   workflow_dispatch: {}
   push:
-    branches: [aarch64]
     paths:
       - "container/**"
       - ".github/workflows/container.yaml"
@@ -17,8 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download ALARM rootfs tarball
-        run: curl -Lo container/ArchLinuxARM-aarch64-latest.tar.gz http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz
+      - name: Download and verify ALARM rootfs tarball
+        # This tarball becomes the entire CI container. It was previously fetched
+        # over plain HTTP, with no integrity check and without curl --fail, so an
+        # HTTP error page would have been written to the file and the step would
+        # still have succeeded. os.archlinuxarm.org has no valid TLS certificate;
+        # de3.mirror.archlinuxarm.org does, and publishes the .md5 alongside.
+        env:
+          MIRROR: https://de3.mirror.archlinuxarm.org/os
+          TARBALL: ArchLinuxARM-aarch64-latest.tar.gz
+        run: |
+          set -euo pipefail
+          curl -fsSL --proto '=https' --tlsv1.2 -o "container/$TARBALL" "$MIRROR/$TARBALL"
+          curl -fsSL --proto '=https' --tlsv1.2 -o /tmp/rootfs.md5 "$MIRROR/$TARBALL.md5"
+          ( cd container && md5sum -c /tmp/rootfs.md5 )
 
       - name: Log in to GHCR
         uses: docker/login-action@v4

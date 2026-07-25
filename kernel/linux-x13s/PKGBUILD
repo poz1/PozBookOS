@@ -65,6 +65,23 @@ prepare() {
   echo "Applying kernel config..."
   cat "${srcdir}/config" > ./.config
   make LLVM=1 LLVM_IAS=1 ${_cross:+CROSS_COMPILE=$_cross} ARCH=$_arch olddefconfig
+
+  # A hand-edited config silently loses symbols here: this is how
+  # CONFIG_SCHED_EXT=y survived in-tree for months while sched_ext was never
+  # actually built (the real symbol is CONFIG_SCHED_CLASS_EXT), and how
+  # CONFIG_DEFAULT_TCP_CONG="bbr" kept reverting to "cubic".
+  if ! diff -u "${srcdir}/config" ./.config > "${srcdir}/config.diff"; then
+    echo "WARNING: kernel/linux-x13s/config is not what Kconfig produces."
+    echo "         Regenerate it with:"
+    echo "           make LLVM=1 LLVM_IAS=1 ARCH=arm64 olddefconfig"
+    echo "         Symbols dropped:"
+    comm -23 <(grep -oE '^CONFIG_[A-Z0-9_]+' "${srcdir}/config" | sort -u)              <(grep -oE '^CONFIG_[A-Z0-9_]+' ./.config | sort -u) | sed 's/^/           -/'
+    if [[ -n "${POZBOOK_STRICT_CONFIG:-}" ]]; then
+      echo "ERROR: POZBOOK_STRICT_CONFIG is set; refusing to build a kernel that does"
+      echo "       not match the committed config."
+      return 1
+    fi
+  fi
 }
 
 build() {
@@ -102,10 +119,12 @@ _package() {
     'wireless-regdb: to set the correct wireless channels of your country'
     'linux-firmware: firmware images needed for some devices'
     'linux-firmware-qcom: firmware images suggested for qcom devices'
+    'cryptsetup: required by the encrypt hook in the shipped mkinitcpio drop-in'
   )
   provides=("linux=${pkgver}" "WIREGUARD-MODULE")
   conflicts=('linux')
-  backup=("etc/mkinitcpio.d/${pkgbase}.preset")
+  backup=("etc/mkinitcpio.d/${pkgbase}.preset"
+          "etc/mkinitcpio.conf.d/x13s.conf")
   install=${pkgname}.install
 
   cd $_srcname
