@@ -2,13 +2,13 @@
 # Maintainer: Alex Robinson <alex@ironrobin.net>
 
 buildarch=8
-_stable_tag=v6.18.12
+_stable_tag=v6.18.40
 
 pkgbase=linux-x13s
 _srcname=linux-6.18
 _kernelname=${pkgbase#linux}
 _desc="ThinkPad X13s (Snapdragon 8cx Gen 3)"
-pkgver="6.18.12"
+pkgver="6.18.40"
 pkgrel=1
 
 _arch=arm64
