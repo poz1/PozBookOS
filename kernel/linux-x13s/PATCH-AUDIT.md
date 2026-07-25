@@ -1,6 +1,12 @@
 # Kernel Patch Audit Report
 
-Audit of 64 patches in `kernel/linux-x13s/patches/` for the ThinkPad X13s
+> **Note:** this audit was written against the earlier 64-patch series on Linux
+> 6.18. The tree now carries the full 256-patch X13s series from steev's
+> `lenovo-x13s-linux-7.0.y`, forward-ported to 7.1.5. The per-patch sections
+> below are kept for the reasoning they record, but the numbering no longer
+> matches the files. The demonstrably wrong claims have been corrected in place.
+
+Audit of the patches in `kernel/linux-x13s/patches/` for the ThinkPad X13s
 (Snapdragon 8cx Gen 3 / SC8280XP) on Linux 6.18.12.
 
 ---
@@ -42,7 +48,7 @@ with GCC for the kernel), this yields significantly better codegen for big.LITTL
 - Suspend (s2idle)
 - EC integration (patches 0056-0059)
 - EFI variables and capsule updates
-- Remoteproc (ADSP, CDSP, MPSS) attach/detach
+- Remoteproc (ADSP, CDSP, SLPI) attach/detach — there is no MPSS node on SC8280XP; the modem is an external PCIe/MHI device
 
 ### Not working / Not yet supported
 
@@ -319,10 +325,10 @@ If `NFS_FS` and `CIFS` are removed, also remove their dependencies:
 |--------|-------|----------------|
 | `ARM_SCMI_CPUFREQ` | `=y` | X13s uses `QCOM_CPUFREQ_HW`, not SCMI for cpufreq. ~10KB built-in. |
 | `ARM_SBSA_WATCHDOG` | `=y` | Server-class SBSA watchdog. X13s has `QCOM_WDT`. ~10KB built-in. |
-| `EC_LENOVO_THINKPAD_T14S` | `=m` | Wrong device — T14s Gen 6 (Snapdragon X Elite), not X13s. ~10KB module. |
+| `EC_LENOVO_THINKPAD_T14S` | `=m` | **Keep.** Despite the name this is the X13s EC driver: four patches in this very series add an `EC_VARIANT_X13S` path to it and a matching DT node. Disabling it loses the function keys and the keyboard-backlight suspend hooks. |
 | `SND_SOC_WSA884X` | `=m` | Wrong amplifier — X13s uses WSA883X. ~30KB module. |
-| `INPUT_TOUCHSCREEN` | `=y` | X13s has no touchscreen. ~5KB subsystem overhead. |
-| `I2C_HID_OF_ELAN` | `=m` | Elan-specific I2C HID. X13s trackpad uses standard HID-over-I2C. Test without. |
+| `INPUT_TOUCHSCREEN` | `=y` | **Keep.** The X13s does have a touchscreen: `touchscreen@10` on I2C4, `compatible = "elan,ekth5015m", "elan,ekth6915"`. |
+| `I2C_HID_OF_ELAN` | `=m` | **Keep.** The trackpad is generic HID-over-I2C, but the touchscreen is not: `i2c-hid-of-elan.c` is what matches `elan,ekth6915`. |
 | WWAN (`MHI_WWAN_CTRL`, `MHI_WWAN_MBIM`, `WWAN`) | `=m` | Only needed if your SKU has the optional 5G modem. ~100KB modules. |
 
 ### Medium Impact — Unnecessary Crypto

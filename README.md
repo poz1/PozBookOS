@@ -4,7 +4,9 @@ Arch Linux ARM distribution optimized for the Lenovo ThinkPad X13s (Snapdragon 8
 
 ## Kernel
 
-Based on Linux 6.18.12 stable with 64 patches from [steev's X13s branch](https://github.com/steev/linux/tree/lenovo-x13s-linux-6.18.y).
+Based on Linux 7.1.5 stable with the 256-patch X13s series from [steev's branch](https://github.com/steev/linux/tree/lenovo-x13s-linux-7.0.y), forward-ported to 7.1.
+
+Every patch applies to a pristine `v7.1.5` with plain `patch -Np1` and the config is Kconfig-consistent: `make olddefconfig` is a no-op on it, and the build refuses to proceed if that stops being true.
 
 | Feature | Detail |
 |---|---|
@@ -12,20 +14,37 @@ Based on Linux 6.18.12 stable with 64 patches from [steev's X13s branch](https:/
 | ThinLTO | Whole-program link-time optimization (+5-12% throughput) |
 | CFI | Clang Control Flow Integrity (forward-edge protection) |
 | Shadow Call Stack | Return address protection (ARM64 hardware-backed) |
-| sched_ext | BPF scheduler extensions for big.LITTLE-aware scheduling |
+| sched_ext | BPF scheduler extensions (`CONFIG_SCHED_CLASS_EXT`; needs a scheduler from `scx-scheds` to do anything at runtime) |
 | DAMON | Data Access Monitoring with proactive reclaim and LRU sort |
 | MGLRU | Multi-Gen LRU page replacement |
 | Lazy preemption | Better throughput with comparable interactivity |
 | ZRAM | LZ4 primary + ZSTD secondary multi-comp, 50% of RAM |
 | Thermal governor | power_allocator PID controller (+5-15% sustained perf) |
-| BBR + fq | TCP congestion control optimized for WiFi |
+| BBR + fq | TCP congestion control optimized for WiFi (`CONFIG_DEFAULT_BBR`) |
 | PCIe ASPM | Power supersave for NVMe and WiFi |
 | CPU idle | TEO governor for deeper C-states |
 | NUMA disabled | Removed — SC8280XP is UMA (saves per-CPU overhead) |
 | NR_CPUS=8 | Exact core count instead of default 512 |
+| Iris VPU | Hardware H.264/H.265/VP9 decode via the SC8280XP video accelerator |
+| BTI | Branch Target Identification enabled for the kernel |
 | Module compression | ZSTD-compressed modules (~100-300 MB disk savings) |
 
 Required boot parameters: `clk_ignore_unused pd_ignore_unused arm64.nopauth efi=noruntime`
+
+> `efi=noruntime` is only needed on older Lenovo firmware. With a recent UEFI and
+> "Linux Boot" enabled in the BIOS it can be dropped, which is what makes
+> `efibootmgr` and `bootctl` usable during installation.
+
+## Building
+
+The ISO is built by CI, not locally: `profiles/x13s/pacman.conf` deliberately has
+no repository providing `linux-x13s`. `.github/workflows/iso.yaml` builds (or
+downloads) the kernel package and injects it as a local repo before running
+`mkarchiso`. `container/Dockerfile` pins archiso to an exact version and applies
+`container/archiso-dtb-support.patch`, which teaches mkarchiso to substitute
+`%DTB%` and to copy the device tree onto the ISO and the EFI system partition --
+upstream archiso has no notion of a device tree, and an X13s cannot boot without
+one.
 
 ## Image
 
@@ -33,10 +52,12 @@ Live/installer ISO with Sway/Wayland desktop. SquashFS compressed with zstd leve
 
 | Feature | Detail |
 |---|---|
-| Desktop | Sway + Waybar + foot + wofi + mako |
+| Desktop | Sway + Waybar + foot + wofi + mako (installed, not preconfigured -- the live session drops to a TTY) |
 | Browser | Firefox |
 | Audio | PipeWire + WirePlumber with codec power-save |
 | GPU | Mesa/Turnip Vulkan 1.3 (Adreno 690) |
+| Video decode | GStreamer + mpv on the Iris V4L2 M2M decoder |
+| Camera | libcamera (software ISP) + pipewire-libcamera for the ov5675 |
 | WiFi | iwd with 5/6 GHz band preference and roam tuning |
 | Networking | systemd-networkd, BBR, TCP Fast Open, WiFi buffer tuning |
 | Memory | ZRAM (LZ4+ZSTD), MGLRU, DAMON reclaim, 64KB mTHP |
