@@ -1,0 +1,23 @@
+From 626982f73b85176d7bcd45f5f36f59bbafb625cf Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Mon, 19 Jan 2026 23:01:36 -0600
+Subject: [PATCH 127/263] arm64: qcom_laptops.config: Enable WIREGUARD
+
+---
+ arch/arm64/configs/qcom_laptops.config | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index d20d01360..cfe879bbb 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -122,3 +122,6 @@ CONFIG_DEBUG_INFO_BTF=y
+ 
+ # Enable binfmt-misc
+ CONFIG_BINFMT_MISC=m
++
++# Enable Wireguard
++CONFIG_WIREGUARD=m
+-- 
+2.43.0
+

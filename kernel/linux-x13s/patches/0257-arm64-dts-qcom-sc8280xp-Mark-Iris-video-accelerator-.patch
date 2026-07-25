@@ -1,0 +1,34 @@
+From 8953fc22ef6ee706ee72689cde9e8f2a1f9d15bc Mon Sep 17 00:00:00 2001
+From: Xilin Wu <sophon@radxa.com>
+Date: Fri, 5 Jun 2026 15:27:46 +0800
+Subject: [PATCH 257/263] arm64: dts: qcom: sc8280xp: Mark Iris video
+ accelerator as dma-coherent
+
+The Iris video accelerator is DMA coherent. Marking it as such vastly
+improves decoding performance. No frame corruption has been observed.
+
+Performance data before and after the change:
+
+HEVC 4k 8bit 80fps -> 360fps
+HEVC 4k 10bit 40fps -> 240fps
+
+Signed-off-by: Xilin Wu <sophon@radxa.com>
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 153025481..e9f7e4482 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -4267,6 +4267,7 @@ &config_noc SLAVE_VENUS_CFG QCOM_ICC_TAG_ACTIVE_ONLY>,
+ 			iommus = <&apps_smmu 0x2a00 0x400>,
+ 				 <&apps_smmu 0x2a07 0x400>;
+ 			memory-region = <&pil_video_mem>;
++			dma-coherent;
+ 
+ 			status = "disabled";
+ 
+-- 
+2.43.0
+

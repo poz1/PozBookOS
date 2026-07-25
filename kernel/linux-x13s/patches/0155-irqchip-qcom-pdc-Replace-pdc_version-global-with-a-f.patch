@@ -1,0 +1,59 @@
+From 98be9fd9ab20d49910476b03c1423d4d723cbb0c Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:41 +0530
+Subject: [PATCH 155/263] irqchip/qcom-pdc: Replace pdc_version global with a
+ function pointer
+
+Now that the two enable paths are separate functions, replace the
+pdc_version global with a __pdc_enable_intr function pointer. The
+pointer is assigned once at probe time based on the version register,
+moving the version comparison out of the interrupt enable/disable hot
+path entirely.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-5-mukesh.ojha@oss.qualcomm.com
+---
+ drivers/irqchip/qcom-pdc.c | 13 +++----------
+ 1 file changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/irqchip/qcom-pdc.c b/drivers/irqchip/qcom-pdc.c
+index 21e2b4b88..734576cdc 100644
+--- a/drivers/irqchip/qcom-pdc.c
++++ b/drivers/irqchip/qcom-pdc.c
+@@ -51,7 +51,7 @@ static void __iomem *pdc_base;
+ static void __iomem *pdc_prev_base;
+ static struct pdc_pin_region *pdc_region;
+ static int pdc_region_cnt;
+-static unsigned int pdc_version;
++static void (*__pdc_enable_intr)(int pin_out, bool on);
+ static bool pdc_x1e_quirk;
+ 
+ static void pdc_base_reg_write(void __iomem *base, int reg, u32 i, u32 val)
+@@ -123,14 +123,6 @@ static void pdc_enable_intr_cfg(int pin_out, bool on)
+ 	pdc_reg_write(IRQ_i_CFG, pin_out, enable);
+ }
+ 
+-static void __pdc_enable_intr(int pin_out, bool on)
+-{
+-	if (pdc_version < PDC_VERSION_3_2)
+-		pdc_enable_intr_bank(pin_out, on);
+-	else
+-		pdc_enable_intr_cfg(pin_out, on);
+-}
+-
+ static void pdc_enable_intr(struct irq_data *d, bool on)
+ {
+ 	unsigned long flags;
+@@ -400,7 +392,8 @@ static int qcom_pdc_probe(struct platform_device *pdev, struct device_node *pare
+ 		goto fail;
+ 	}
+ 
+-	pdc_version = pdc_reg_read(PDC_VERSION_REG, 0);
++	__pdc_enable_intr = (pdc_reg_read(PDC_VERSION_REG, 0) < PDC_VERSION_3_2) ?
++			pdc_enable_intr_bank : pdc_enable_intr_cfg;
+ 
+ 	parent_domain = irq_find_host(parent);
+ 	if (!parent_domain) {
+-- 
+2.43.0
+

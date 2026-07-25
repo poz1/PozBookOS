@@ -1,0 +1,91 @@
+From ea68f4232c0fce45bd123dd021c1da181606b3a0 Mon Sep 17 00:00:00 2001
+From: Jie Zhang <jie.zhang@oss.qualcomm.com>
+Date: Fri, 5 Jun 2026 01:38:21 +0530
+Subject: [PATCH 253/263] drm/msm/a6xx: Fix IRQ storm during msm_recovery test
+
+Once a hang is triggered by the msm_recovery test, the gpu error irq
+remains asserted and triggers an interrupt storm. In the worst case,
+this IRQ storm lands on the CPU core where the hangcheck timer is
+scheduled, blocking it from running. This eventually leads to CPU
+watchdog timeouts.
+
+To fix this, mask the gpu error irqs during msm_recovery test and
+enable them back during the recovery.
+
+Fixes: 5edf2750d998 ("drm/msm: Add debugfs to disable hw err handling")
+Signed-off-by: Jie Zhang <jie.zhang@oss.qualcomm.com>
+Signed-off-by: Akhil P Oommen <akhilpo@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260605-assorted-fixes-june-v1-5-2caa04f7287c@oss.qualcomm.com
+---
+ drivers/gpu/drm/msm/adreno/a5xx_gpu.c | 5 +++++
+ drivers/gpu/drm/msm/adreno/a6xx_gpu.c | 5 ++++-
+ drivers/gpu/drm/msm/adreno/a8xx_gpu.c | 5 ++++-
+ drivers/gpu/drm/msm/msm_gpu.c         | 2 ++
+ 4 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/msm/adreno/a5xx_gpu.c b/drivers/gpu/drm/msm/adreno/a5xx_gpu.c
+index 79acae111..b8cb7e346 100644
+--- a/drivers/gpu/drm/msm/adreno/a5xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a5xx_gpu.c
+@@ -1281,6 +1281,11 @@ static irqreturn_t a5xx_irq(struct msm_gpu *gpu)
+ 		status & ~A5XX_RBBM_INT_0_MASK_RBBM_AHB_ERROR);
+ 
+ 	if (priv->disable_err_irq) {
++		/* Turn off interrupts to avoid interrupt storm */
++		gpu_write(gpu, REG_A5XX_RBBM_INT_0_MASK,
++			       A5XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS |
++			       A5XX_RBBM_INT_0_MASK_CP_SW);
++
+ 		status &= A5XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS |
+ 			  A5XX_RBBM_INT_0_MASK_CP_SW;
+ 	}
+diff --git a/drivers/gpu/drm/msm/adreno/a6xx_gpu.c b/drivers/gpu/drm/msm/adreno/a6xx_gpu.c
+index 7863bf9e4..351ee6a42 100644
+--- a/drivers/gpu/drm/msm/adreno/a6xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_gpu.c
+@@ -1987,8 +1987,11 @@ static irqreturn_t a6xx_irq(struct msm_gpu *gpu)
+ 
+ 	gpu_write(gpu, REG_A6XX_RBBM_INT_CLEAR_CMD, status);
+ 
+-	if (priv->disable_err_irq)
++	if (priv->disable_err_irq) {
++		/* Turn off interrupts to avoid interrupt storm */
++		gpu_write(gpu, REG_A6XX_RBBM_INT_0_MASK, A6XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS);
+ 		status &= A6XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS;
++	}
+ 
+ 	if (status & A6XX_RBBM_INT_0_MASK_RBBM_HANG_DETECT)
+ 		a6xx_fault_detect_irq(gpu);
+diff --git a/drivers/gpu/drm/msm/adreno/a8xx_gpu.c b/drivers/gpu/drm/msm/adreno/a8xx_gpu.c
+index fafeac62a..0db1b360c 100644
+--- a/drivers/gpu/drm/msm/adreno/a8xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a8xx_gpu.c
+@@ -1079,8 +1079,11 @@ irqreturn_t a8xx_irq(struct msm_gpu *gpu)
+ 
+ 	gpu_write(gpu, REG_A8XX_RBBM_INT_CLEAR_CMD, status);
+ 
+-	if (priv->disable_err_irq)
++	if (priv->disable_err_irq) {
++		/* Turn off interrupts to avoid interrupt storm */
++		gpu_write(gpu, REG_A8XX_RBBM_INT_0_MASK, A6XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS);
+ 		status &= A6XX_RBBM_INT_0_MASK_CP_CACHE_FLUSH_TS;
++	}
+ 
+ 	if (status & A6XX_RBBM_INT_0_MASK_RBBM_HANG_DETECT)
+ 		a8xx_fault_detect_irq(gpu);
+diff --git a/drivers/gpu/drm/msm/msm_gpu.c b/drivers/gpu/drm/msm/msm_gpu.c
+index 9460b71eb..87dbab260 100644
+--- a/drivers/gpu/drm/msm/msm_gpu.c
++++ b/drivers/gpu/drm/msm/msm_gpu.c
+@@ -546,6 +546,8 @@ static void recover_worker(struct kthread_work *work)
+ 		msm_update_fence(ring->fctx, fence);
+ 	}
+ 
++	priv->disable_err_irq = false;
++
+ 	gpu->funcs->recover(gpu);
+ 
+ 	/* retire completed submits, plus the one that hung: */
+-- 
+2.43.0
+

@@ -1,0 +1,33 @@
+From 58a0c2896a574ef4bf5e17f0653260dc9bd60e59 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Thu, 23 Oct 2025 12:45:52 +0200
+Subject: [PATCH 068/263] arm64: qcom_laptops.config: Enable SECURITY_LANDLOCK
+
+CONFIG_SECURITY_LANDLOCK is needed on Ubuntu by localsearch ("Tracker
+file system data miner") service for file indexing:
+
+  localsearch-3[72620]: Refusing to extract file data since Landlock could not be enabled. Update your kernel to fix this warning.
+  localsearch-3[72620]: Could not get landlock supported ABI: Function not implemented
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index ea1be4d49..babfe278f 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -65,6 +65,8 @@ CONFIG_SQUASHFS_XATTR=y
+ CONFIG_SQUASHFS_LZ4=y
+ CONFIG_SQUASHFS_LZO=y
+ CONFIG_SQUASHFS_XZ=y
++# For Ubuntu/localsearch
++CONFIG_SECURITY_LANDLOCK=y
+ 
+ # For network sharing, e.g. in Ubuntu connection sharing with test boards
+ CONFIG_IP_ADVANCED_ROUTER=y
+-- 
+2.43.0
+

@@ -1,0 +1,84 @@
+From d60fd143c836bf1a8940ece4cda0cd8010642f1c Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Tue, 14 Apr 2026 21:29:40 +0530
+Subject: [PATCH 188/263] PCI: Indicate context lost if L1ss exit is broken
+ during resume from system suspend
+
+The PCIe spec v7.0, sec 5.5.3.3.1, states that for exiting L1.2 due to an
+endpoint asserting CLKREQ# signal, the refclk must be turned on no earlier
+than TL10_REFCLK_ON, and within the latency advertised in the LTR message.
+This same behavior applies to L1.1 as well.
+
+On some platforms like Qcom, these requirements are satisfied during OS
+runtime, but not while resuming from the system suspend. This happens
+because the PCIe RC driver may remove all resource votes and turns off the
+PHY during suspend to maximize power savings while keeping the link in
+L1ss.
+
+Consequently, when the endpoint asserts CLKREQ# to wake up, the OS must
+first resume and the RC driver must restore the PHY and enable the refclk.
+This recovery process exceeds the L1ss exit latency time. And this latency
+violation results in an L1ss exit timeout, followed by Link Down (LDn). If
+the endpoint device is used to host the RootFS, it will result in an OS
+crash. For other endpoints, it may result in a complete device
+reset/recovery.
+
+So to indicate this platform limitation to the client drivers, introduce a
+new flag 'pci_host_bridge::broken_l1ss_resume' and check it in the
+pci_dev_suspend_retention_supported() API. If the flag is set by the RC
+driver, the API will return 'false' indicating the client drivers that the
+device context may not be retained and the drivers must be prepared for
+context loss.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260414-l1ss-fix-v1-2-adbb4555b5ab@oss.qualcomm.com
+---
+ drivers/pci/pci.c   | 11 +++++++++++
+ include/linux/pci.h |  2 ++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index 3a861f6ad..faf39d74b 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -2910,6 +2910,8 @@ void pci_config_pm_runtime_put(struct pci_dev *pdev)
+  */
+ bool pci_dev_suspend_retention_supported(struct pci_dev *pdev)
+ {
++	struct pci_host_bridge *bridge = pci_find_host_bridge(pdev->bus);
++
+ 	/*
+ 	 * If the platform firmware (like ACPI) is involved at the end of system
+ 	 * suspend, device context may not be retained.
+@@ -2917,6 +2919,15 @@ bool pci_dev_suspend_retention_supported(struct pci_dev *pdev)
+ 	if (pm_suspend_via_firmware())
+ 		return false;
+ 
++	/*
++	 * Some host bridges power off the PHY to enter deep low-power modes
++	 * during system suspend. Exiting L1 PM Substates from this condition
++	 * violates strict timing requirements and results in Link Down (LDn).
++	 * On such platforms, the endpoint must be prepared for context loss.
++	 */
++	if (bridge && bridge->broken_l1ss_resume)
++		return false;
++
+ 	/* Assume that the context is retained by default */
+ 	return true;
+ }
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index ba971b752..464105946 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -652,6 +652,8 @@ struct pci_host_bridge {
+ 	unsigned int	preserve_config:1;	/* Preserve FW resource setup */
+ 	unsigned int	size_windows:1;		/* Enable root bus sizing */
+ 	unsigned int	msi_domain:1;		/* Bridge wants MSI domain */
++	unsigned int	broken_l1ss_resume:1;	/* Resuming from L1ss during
++						   system suspend is broken */
+ 
+ 	/* Resource alignment requirements */
+ 	resource_size_t (*align_resource)(struct pci_dev *dev,
+-- 
+2.43.0
+

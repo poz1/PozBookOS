@@ -1,0 +1,123 @@
+From 3f50b47d48ef9feeb4458e04e276b4eecc41d282 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Mon, 25 Aug 2025 23:14:37 +0530
+Subject: [PATCH 002/263] PCI/ASPM: Fix the behavior of
+ pci_enable_link_state*() APIs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+pci_enable_link_state() and pci_enable_link_state_locked() APIs are
+supposed to be symmectric with pci_disable_link_state() and
+pci_disable_link_state_locked() APIs.
+
+But unfortunately, they are not symmetric. This behavior was mentioned in
+the kernel-doc of these APIs:
+
+" Clear and set the default device link state..."
+
+and
+
+"Also note that this does not enable states disabled by
+pci_disable_link_state()"
+
+These APIs won't enable all the states specified by the 'state' parameter,
+but only enable the ones not previously disabled by the
+pci_disable_link_state*() APIs. But this behavior doesn't align with the
+naming of these APIs, as they give the impression that these APIs will
+enable all the specified states.
+
+To resolve this ambiguity, allow these APIs to enable the specified states,
+regardeless of whether they were previously disabled or not. This is
+accomplished by clearing the previously disabled states from the
+'link::aspm_disable' parameter in __pci_enable_link_state() helper. Also,
+reword the kernel-doc to reflect this behavior.
+
+The current callers of pci_enable_link_state_locked() APIs (vmd and
+pcie-qcom) did not disable the ASPM states before calling this API. So it
+is evident that they do not depend on the previous behavior of this API and
+intend to enable all the specified states.
+
+And the other API, pci_enable_link_state() doesn't have a caller for now,
+but will be used by the 'atheros' WLAN drivers in the subsequent commits.
+
+Suggested-by: Ilpo Järvinen <ilpo.jarvinen@linux.intel.com>
+Co-developed-by: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Signed-off-by: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://patch.msgid.link/20250825-ath-aspm-fix-v2-2-61b2f2db7d89@oss.qualcomm.com
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/pci/pcie/aspm.c | 33 ++++++++++++++++++---------------
+ 1 file changed, 18 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/pci/pcie/aspm.c b/drivers/pci/pcie/aspm.c
+index a2762260b..9734b2b77 100644
+--- a/drivers/pci/pcie/aspm.c
++++ b/drivers/pci/pcie/aspm.c
+@@ -1487,6 +1487,7 @@ static int __pci_enable_link_state(struct pci_dev *pdev, int state, bool locked)
+ 		down_read(&pci_bus_sem);
+ 	mutex_lock(&aspm_lock);
+ 	link->aspm_default = pci_calc_aspm_enable_mask(state);
++	link->aspm_disable &= ~state;
+ 	pcie_config_aspm_link(link, policy_to_aspm_state(link));
+ 
+ 	link->clkpm_default = (state & PCIE_LINK_STATE_CLKPM) ? 1 : 0;
+@@ -1499,17 +1500,18 @@ static int __pci_enable_link_state(struct pci_dev *pdev, int state, bool locked)
+ }
+ 
+ /**
+- * pci_enable_link_state - Clear and set the default device link state so that
+- * the link may be allowed to enter the specified states. Note that if the
+- * BIOS didn't grant ASPM control to the OS, this does nothing because we can't
+- * touch the LNKCTL register. Also note that this does not enable states
+- * disabled by pci_disable_link_state(). Return 0 or a negative errno.
++ * pci_enable_link_state - Enable device's link state
++ * @pdev: PCI device
++ * @state: Mask of ASPM link states to enable
++ *
++ * Enable device's link state, so the link will enter the specified states.
++ * Note that if the BIOS didn't grant ASPM control to the OS, this does
++ * nothing because we can't touch the LNKCTL register.
+  *
+  * Note: Ensure devices are in D0 before enabling PCI-PM L1 PM Substates, per
+  * PCIe r6.0, sec 5.5.4.
+  *
+- * @pdev: PCI device
+- * @state: Mask of ASPM link states to enable
++ * Return: 0 on success, a negative errno otherwise.
+  */
+ int pci_enable_link_state(struct pci_dev *pdev, int state)
+ {
+@@ -1518,19 +1520,20 @@ int pci_enable_link_state(struct pci_dev *pdev, int state)
+ EXPORT_SYMBOL(pci_enable_link_state);
+ 
+ /**
+- * pci_enable_link_state_locked - Clear and set the default device link state
+- * so that the link may be allowed to enter the specified states. Note that if
+- * the BIOS didn't grant ASPM control to the OS, this does nothing because we
+- * can't touch the LNKCTL register. Also note that this does not enable states
+- * disabled by pci_disable_link_state(). Return 0 or a negative errno.
++ * pci_enable_link_state_locked - Enable device's link state
++ * @pdev: PCI device
++ * @state: Mask of ASPM link states to enable
++ *
++ * Enable device's link state, so the link will enter the specified states.
++ * Note that if the BIOS didn't grant ASPM control to the OS, this does
++ * nothing because we can't touch the LNKCTL register.
+  *
+  * Note: Ensure devices are in D0 before enabling PCI-PM L1 PM Substates, per
+  * PCIe r6.0, sec 5.5.4.
+  *
+- * @pdev: PCI device
+- * @state: Mask of ASPM link states to enable
+- *
+  * Context: Caller holds pci_bus_sem read lock.
++ *
++ * Return: 0 on success, a negative errno otherwise.
+  */
+ int pci_enable_link_state_locked(struct pci_dev *pdev, int state)
+ {
+-- 
+2.43.0
+

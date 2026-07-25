@@ -1,0 +1,43 @@
+From 7a1d8020be6dfb40044d0240e2c41640420cf3e4 Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Sun, 21 Dec 2025 22:17:17 -0600
+Subject: [PATCH 116/263] arm64: qcom_laptops.config: Enable ZRAM and sched-ext
+
+This enables config options for ZRAM and using sched-ext external
+schedulers.
+---
+ arch/arm64/configs/qcom_laptops.config | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index b301b1373..ffde3784f 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -99,4 +99,23 @@ CONFIG_SND_USB_AUDIO_MIDI_V2=y
+ CONFIG_FW_LOADER_COMPRESS=y
+ CONFIG_FW_LOADER_COMPRESS_XZ=y
+ CONFIG_FW_LOADER_COMPRESS_ZSTD=y
+-CONFIG_UHID
++CONFIG_UHID=m
++
++# ZRAM
++CONFIG_ZRAM=m
++CONFIG_ZRAM_BACKEND_LZ4=y
++CONFIG_ZRAM_BACKEND_LZ4HC=y
++CONFIG_ZRAM_BACKEND_ZSTD=y
++CONFIG_ZRAM_BACKEND_DEFLATE=y
++
++# sched-ext support
++CONFIG_BPF=y
++CONFIG_BPF_SYSCALL=y
++CONFIG_BPF_JIT_ALWAYS_ON=y
++CONFIG_BPF_JIT_DEFAULT_ON=y
++CONFIG_SCHED_CLASS_EXT=y
++CONFIG_FTRACE=y
++CONFIG_BPF_LSM=y
++CONFIG_DEBUG_INFO_SPLIT=n
++CONFIG_DEBUG_INFO_REDUCED=n
++CONFIG_DEBUG_INFO_BTF=y
+-- 
+2.43.0
+

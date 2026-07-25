@@ -1,0 +1,33 @@
+From fed4e892d7c812876a788441fd16e7c91c299e58 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:12 +0530
+Subject: [PATCH 183/263] arm64: dts: qcom: talos: Drop unused second PDC reg
+ entry
+
+The PDC driver only maps the first register region (APSS DRV) via
+of_address_to_resource(node, 0, ...). The second reg entry was never
+accessed by the driver and can be removed.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-36-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/talos.dtsi | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/talos.dtsi b/arch/arm64/boot/dts/qcom/talos.dtsi
+index b60026f1a..f36701f16 100644
+--- a/arch/arm64/boot/dts/qcom/talos.dtsi
++++ b/arch/arm64/boot/dts/qcom/talos.dtsi
+@@ -4083,8 +4083,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,qcs615-pdc", "qcom,pdc";
+-			reg = <0x0 0x0b220000 0x0 0x10000>,
+-			      <0x0 0x17c000f0 0x0 0x64>;
++			reg = <0x0 0x0b220000 0x0 0x10000>;
+ 			qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>;
+ 			interrupt-parent = <&intc>;
+ 			#interrupt-cells = <2>;
+-- 
+2.43.0
+

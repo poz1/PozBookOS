@@ -156,6 +156,25 @@ zstd
 tealdeer
 unzip
 
+# --- Camera (CamSS + ov5675 via libcamera softISP) ---
+# The kernel side has always been complete (VIDEO_QCOM_CAMSS, VIDEO_OV5675,
+# UDMABUF); nothing in userspace could consume it. The sensor emits raw Bayer,
+# so libcamera's software ISP is what turns /dev/video* into a usable camera,
+# and pipewire-libcamera is what makes it visible to Firefox.
+libcamera
+libcamera-tools
+gst-plugin-libcamera
+pipewire-libcamera
+v4l-utils
+
+# --- Hardware video decode (Iris VPU) ---
+# CONFIG_VIDEO_QCOM_IRIS=m plus the SC8280XP Iris device tree nodes now expose a
+# V4L2 M2M decoder. These are the userspace stacks that can actually drive it.
+gstreamer
+gst-plugins-good
+gst-plugins-bad
+mpv
+
 # --- Custom X13s packages ---
 linux-x13s
 zram-generator
@@ -165,11 +184,30 @@ irqbalance
 powertop
 earlyoom
 
+# --- Display colour temperature ---
+# Patch 0042 adds the DSPP GC driver, which exposes the GAMMA_LUT DRM property
+# on this SoC. gammastep is what uses it under a wlroots compositor.
+gammastep
+
 # --- Security (AppArmor — kernel has CONFIG_SECURITY_APPARMOR=y, this adds userspace) ---
 apparmor
 
-# sched_ext BPF schedulers for big.LITTLE (AUR scx-scheds-git supports aarch64)
-# scx_lavd confirmed working on aarch64 after PR #3193 (Jan 2026)
-# Open issue: #3373 vmlinux.h include path ordering on ARM64 (workaround exists)
-# TODO: build scx-scheds-git for aarch64 and add to ironrobin-x13s repo
-# scx-scheds
+# sched_ext BPF schedulers. Available prebuilt in Arch Linux ARM's [extra] repo
+# (scx-scheds 1.1.2-1, aarch64) -- no local packaging needed.
+#
+# Nothing is started automatically: the kernel keeps using EEVDF, which already
+# drives this SoC's Energy Model. sched_ext schedulers load and unload at
+# runtime, so they are meant to be A/B tested, not defaulted to.
+#
+# The one worth trying here is scx_lavd: it builds a separate scheduling domain
+# per LLC and per core type (this SoC is 4x Cortex-A78C + 4x Cortex-X1C, all 8
+# CPUs carrying capacity-dmips-mhz and dynamic-power-coefficient, so the energy
+# model it wants actually exists), it does core compaction to let unused CPUs
+# reach deep idle, and --autopower follows the system power profile so it drops
+# to powersave on battery:
+#
+#     scx_lavd --autopower
+#
+# scx_rusty partitions by LLC, which buys nothing here: SC8280XP has a single
+# shared L3.
+scx-scheds

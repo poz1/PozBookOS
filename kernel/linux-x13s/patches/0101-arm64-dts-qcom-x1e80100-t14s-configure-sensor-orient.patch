@@ -1,0 +1,29 @@
+From f53fb704f798e61b94d58d8a9b0718ac8b4d122e Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Sat, 16 Aug 2025 00:12:13 +0200
+Subject: [PATCH 101/263] arm64: dts: qcom: x1e80100-t14s: configure sensor
+ orientation
+
+The sensor is mounted upside down, so add the necessary orientation
+information in the DT.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index 1caa4fb69..1e30a9234 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -1011,6 +1011,7 @@ camera@36 {
+ 		assigned-clock-rates = <19200000>;
+ 
+ 		orientation = <0>; /* front facing */
++		rotation = <0>; /* not rotated */
+ 
+ 		avdd-supply = <&vreg_l7m_2p8>;
+ 		dvdd-supply = <&vreg_l2m_1p2>;
+-- 
+2.43.0
+

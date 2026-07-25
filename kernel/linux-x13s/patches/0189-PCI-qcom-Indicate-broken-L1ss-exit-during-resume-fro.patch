@@ -1,0 +1,57 @@
+From feb6417a2bbf8360cfef9d48be196e28982176e0 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Tue, 14 Apr 2026 21:29:41 +0530
+Subject: [PATCH 189/263] PCI: qcom: Indicate broken L1ss exit during resume
+ from system suspend
+
+Qcom PCIe RCs can successfully exit from L1ss during OS runtime. However,
+during system suspend, the Qcom PCIe RC driver may remove all resource
+votes and turns off the PHY to maximize power savings.
+
+Consequently, when the host is in system suspend with the link in L1ss and
+the endpoint asserts CLKREQ#, the OS must first wake up and the RC driver
+must restore the PHY and enable the refclk. This recovery process causes
+the strict L1ss exit latency time to be exceeded. (If the RC driver were to
+retain all votes during suspend, L1ss exit would succeed without issue, but
+at the expense of higher power consumption).
+
+This latency violation leads to an L1ss exit timeout, followed by a Link
+Down (LDn) condition during resume. This LDn can crash the OS if the
+endpoint hosts the RootFS, and for other types of devices, it may result in
+a full device reset/recovery.
+
+So to ensure that the client drivers can properly handle this scenario, let
+them know about this platform limitation by setting the
+'pci_host_bridge::broken_l1ss_resume' flag.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260414-l1ss-fix-v1-3-adbb4555b5ab@oss.qualcomm.com
+---
+ drivers/pci/controller/dwc/pcie-qcom.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 0f714d53f..890063950 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -1363,6 +1363,17 @@ static void qcom_pcie_host_post_init(struct dw_pcie_rp *pp)
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+ 	struct qcom_pcie *pcie = to_qcom_pcie(pci);
+ 
++	/*
++	 * During system suspend, the Qcom RC driver may turn off the PHY and
++	 * remove votes to save power. If the endpoint asserts CLKREQ# to
++	 * exit L1ss, the time required to wake the system and restore the
++	 * PHY/refclk exceeds the strict L1ss exit timing, resulting in Link
++	 * Down (LDn). Set this flag to indicate this limitation to client
++	 * drivers so that they will avoid relying on L1ss during system
++	 * suspend.
++	 */
++	pp->bridge->broken_l1ss_resume = true;
++
+ 	if (pcie->cfg->ops->host_post_init)
+ 		pcie->cfg->ops->host_post_init(pcie);
+ }
+-- 
+2.43.0
+

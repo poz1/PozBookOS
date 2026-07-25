@@ -11,7 +11,13 @@ on:
   push:
     paths:
       - "profiles/x13s/**"
+      - "container/**"
       - ".github/workflows/iso.yaml"
+
+permissions:
+  contents: read
+  actions: read
+  packages: read
 
 jobs:
   kernel:
@@ -24,12 +30,23 @@ jobs:
     outputs:
       run-id: ${{ steps.lookup.outputs.run-id }}
     steps:
-      - name: Find latest successful kernel run
+      - name: Find latest successful kernel run on this branch
         id: lookup
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          run_id=$(gh run list -R "$GITHUB_REPOSITORY" -w kernel.yaml -s success -L 1 --json databaseId -q '.[0].databaseId')
+          set -euo pipefail
+          # Without -b this picks the newest successful run on ANY branch, and a
+          # missing run yields the literal "null" while the step still exits 0 --
+          # producing an ISO with a foreign or absent kernel and a green check.
+          run_id=$(gh run list -R "$GITHUB_REPOSITORY" -w kernel.yaml -s success \
+                     -b "${{ github.ref_name }}" -L 1 --json databaseId -q '.[0].databaseId')
+          if [[ -z "$run_id" || "$run_id" == "null" ]]; then
+            echo "::error::No successful kernel.yaml run on branch ${{ github.ref_name }}."
+            echo "Run the kernel workflow first, or dispatch this one with withKernel=true."
+            exit 1
+          fi
+          echo "Using kernel artifact from run $run_id"
           echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
 
   build:
@@ -37,7 +54,14 @@ jobs:
     needs: [kernel, find-kernel-run]
     if: ${{ always() && (needs.kernel.result == 'success' || needs.find-kernel-run.result == 'success') }}
     container:
+      # Hardcoded lowercase on purpose: Docker rejects a repository name with
+      # uppercase letters, and ${{ github.repository }} preserves the case of
+      # poz1/PozBookOS. docker/metadata-action lowercases it on the push side in
+      # container.yaml, so this is the name the image actually lands under.
       image: ghcr.io/poz1/pozbookos/alarm-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       options: --privileged
     steps:
       - uses: actions/checkout@v6
@@ -60,18 +84,56 @@ jobs:
 
       - name: Inject kernel package into local repo
         run: |
+          set -euo pipefail
+          ls /tmp/kernel-pkg/*.pkg.tar.* >/dev/null
           repo-add /tmp/kernel-pkg/linux-x13s-local.db.tar.gz /tmp/kernel-pkg/*.pkg.tar.*
-          printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' >> profiles/x13s/pacman.conf
+          printf '\n[linux-x13s-local]\nSigLevel = Optional TrustAll\nServer = file:///tmp/kernel-pkg\n' \
+            >> profiles/x13s/pacman.conf
 
       - name: Build ISO
         run: |
+          set -euo pipefail
           # Disable Landlock sandbox in profile pacman.conf (used by pacstrap inside mkarchiso)
           sed -i 's/^#\?DisableSandbox/DisableSandbox/' profiles/x13s/pacman.conf
           grep -q '^DisableSandbox' profiles/x13s/pacman.conf || sed -i '/^ParallelDownloads/a DisableSandbox' profiles/x13s/pacman.conf
           mkarchiso -v profiles/x13s
+
+      - name: Verify the ISO is actually bootable on an X13s
+        # Cheap guards against the two failure modes that previously shipped a
+        # green build and an unbootable image. The ISO 9660 copies mirror what
+        # mkarchiso puts into efiboot.img, so checking them is a valid proxy.
+        run: |
+          set -euo pipefail
+          iso=$(ls out/*.iso)
+          rm -rf /tmp/chk && mkdir -p /tmp/chk
+          osirrox -indev "$iso" -extract /loader/entries /tmp/chk/entries
+          osirrox -indev "$iso" -extract /arch/boot/aarch64 /tmp/chk/boot
+
+          entry=/tmp/chk/entries/01-archiso-linux.conf
+          if grep -q "%[A-Z_]*%" "$entry"; then
+            echo "::error::unsubstituted placeholder left in $entry"
+            cat "$entry"
+            exit 1
+          fi
+
+          if [[ ! -f /tmp/chk/boot/sc8280xp-lenovo-thinkpad-x13s.dtb ]]; then
+            echo "::error::device tree missing from the ISO -- the X13s cannot boot without it"
+            ls -la /tmp/chk/boot
+            exit 1
+          fi
+
+          # On arm64 the EFI stub PE header exists only in the uncompressed Image.
+          magic=$(od -An -tx1 -N2 /tmp/chk/boot/vmlinuz-linux-x13s | tr -d " ")
+          if [[ "$magic" != "4d5a" ]]; then
+            echo "::error::vmlinuz-linux-x13s is not a PE/EFI image (magic $magic, expected 4d5a = MZ)"
+            exit 1
+          fi
+
+          echo "boot entry substituted, dtb present, kernel is a PE/EFI image"
 
       - name: Upload ISO
         uses: actions/upload-artifact@v7
         with:
           name: archlinux-x13s
           path: out/*.iso
+          if-no-files-found: error

@@ -1,0 +1,27 @@
+From 8acec3091dac46059a8896969c12f8946067df0d Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Thu, 14 May 2026 15:03:17 -0500
+Subject: [PATCH 224/263] Revert "wifi: ath11k: Override spammy warn for
+ msdu_done"
+
+This reverts commit 76c088d74facdc11fd31e201b1ad2e893c049ee0.
+---
+ drivers/net/wireless/ath/ath11k/dp_rx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/ath/ath11k/dp_rx.c b/drivers/net/wireless/ath/ath11k/dp_rx.c
+index e84ac8163..9bbafbd69 100644
+--- a/drivers/net/wireless/ath/ath11k/dp_rx.c
++++ b/drivers/net/wireless/ath/ath11k/dp_rx.c
+@@ -2535,7 +2535,7 @@ static int ath11k_dp_rx_process_msdu(struct ath11k *ar,
+ 	lrx_desc = (struct hal_rx_desc *)last_buf->data;
+ 	rx_attention = ath11k_dp_rx_get_attention(ab, lrx_desc);
+ 	if (!ath11k_dp_rx_h_attn_msdu_done(rx_attention)) {
+-		/* ath11k_warn(ab, "msdu_done bit in attention is not set\n"); */
++		ath11k_warn(ab, "msdu_done bit in attention is not set\n");
+ 		ret = -EIO;
+ 		goto free_out;
+ 	}
+-- 
+2.43.0
+

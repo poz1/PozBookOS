@@ -1,0 +1,83 @@
+From b87a5664a4a6ee0396438e60f45e7a5b24606cc3 Mon Sep 17 00:00:00 2001
+From: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Date: Tue, 28 Apr 2026 14:07:16 +0530
+Subject: [PATCH 202/263] PCI: dwc: Add helper to Program T_POWER_ON
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The T_POWER_ON indicates the time (in μs) that a Port requires the port
+on the opposite side of Link to wait in L1.2.Exit after sampling CLKREQ#
+asserted before actively driving the interface. This value is used by
+the ASPM driver to compute the LTR_L1.2_THRESHOLD.
+
+Currently, some controllers exposes T_POWER_ON value of zero in the L1SS
+capability registers, leading to incorrect LTR_L1.2_THRESHOLD calculations,
+which can result in improper L1.2 exit behavior and if AER happens to be
+supported and enabled, the error may be *reported* via AER.
+
+Add a helper to override T_POWER_ON value by the DWC controller drivers.
+
+Tested-by: Shawn Lin <shawn.lin@rock-chips.com>
+Reviewed-by: Shawn Lin <shawn.lin@rock-chips.com>
+Signed-off-by: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260428-t_power_on_fux-v5-2-f1ef926a91ff@oss.qualcomm.com
+---
+ drivers/pci/controller/dwc/pcie-designware.c | 28 ++++++++++++++++++++
+ drivers/pci/controller/dwc/pcie-designware.h |  1 +
+ 2 files changed, 29 insertions(+)
+
+diff --git a/drivers/pci/controller/dwc/pcie-designware.c b/drivers/pci/controller/dwc/pcie-designware.c
+index bb4e82fbf..d73e57f89 100644
+--- a/drivers/pci/controller/dwc/pcie-designware.c
++++ b/drivers/pci/controller/dwc/pcie-designware.c
+@@ -1249,6 +1249,34 @@ void dw_pcie_hide_unsupported_l1ss(struct dw_pcie *pci)
+ 	dw_pcie_writel_dbi(pci, l1ss + PCI_L1SS_CAP, l1ss_cap);
+ }
+ 
++/* TODO: Need to handle multi Root Ports */
++void dw_pcie_program_t_power_on(struct dw_pcie *pci, u16 t_power_on)
++{
++	u8 scale, value;
++	u16 offset;
++	u32 val;
++
++	if (!t_power_on)
++		return;
++
++	offset = dw_pcie_find_ext_capability(pci, PCI_EXT_CAP_ID_L1SS);
++	if (!offset)
++		return;
++
++	pcie_encode_t_power_on(t_power_on, &scale, &value);
++
++	dw_pcie_dbi_ro_wr_en(pci);
++
++	val = dw_pcie_readl_dbi(pci, offset + PCI_L1SS_CAP);
++	val &= ~(PCI_L1SS_CAP_P_PWR_ON_SCALE | PCI_L1SS_CAP_P_PWR_ON_VALUE);
++	FIELD_MODIFY(PCI_L1SS_CAP_P_PWR_ON_SCALE, &val, scale);
++	FIELD_MODIFY(PCI_L1SS_CAP_P_PWR_ON_VALUE, &val, value);
++
++	dw_pcie_writel_dbi(pci, offset + PCI_L1SS_CAP, val);
++
++	dw_pcie_dbi_ro_wr_dis(pci);
++}
++
+ void dw_pcie_setup(struct dw_pcie *pci)
+ {
+ 	u32 val;
+diff --git a/drivers/pci/controller/dwc/pcie-designware.h b/drivers/pci/controller/dwc/pcie-designware.h
+index 3e69ef601..6f741fd9d 100644
+--- a/drivers/pci/controller/dwc/pcie-designware.h
++++ b/drivers/pci/controller/dwc/pcie-designware.h
+@@ -605,6 +605,7 @@ int dw_pcie_prog_ep_inbound_atu(struct dw_pcie *pci, u8 func_no, int index,
+ 				u8 bar, size_t size);
+ void dw_pcie_disable_atu(struct dw_pcie *pci, u32 dir, int index);
+ void dw_pcie_hide_unsupported_l1ss(struct dw_pcie *pci);
++void dw_pcie_program_t_power_on(struct dw_pcie *pci, u16 t_power_on);
+ void dw_pcie_setup(struct dw_pcie *pci);
+ void dw_pcie_iatu_detect(struct dw_pcie *pci);
+ int dw_pcie_edma_detect(struct dw_pcie *pci);
+-- 
+2.43.0
+

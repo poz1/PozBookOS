@@ -1,0 +1,31 @@
+From 20eb26089130617a739fc292bcd4a5b9dc99cfc3 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sre@kernel.org>
+Date: Sat, 27 Dec 2025 17:32:48 +0100
+Subject: [PATCH 105/263] arm64: dts: qcom: x1e80100-t14s: Add fan controller
+
+Add fan controller to the T14s device tree.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index 4eb649464..e74507151 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -1179,6 +1179,11 @@ &i2c5 {
+ 
+ 	status = "okay";
+ 
++	fan-controller@36 {
++		compatible = "lenovo,thinkpad-t14s-fan-controller";
++		reg = <0x36>;
++	};
++
+ 	eusb5_repeater: redriver@43 {
+ 		compatible = "nxp,ptn3222";
+ 		reg = <0x43>;
+-- 
+2.43.0
+

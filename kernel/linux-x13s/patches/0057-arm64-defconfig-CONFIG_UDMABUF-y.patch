@@ -1,0 +1,29 @@
+From c13f5588adeb57aa7adbdcee8d4af9dedcec491d Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Wed, 21 Aug 2024 10:30:19 +0100
+Subject: [PATCH 057/263] arm64: defconfig: CONFIG_UDMABUF=y
+
+Needed for current libcamera support.
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index d4171a0f0..5964b45f2 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1368,6 +1368,7 @@ CONFIG_RTC_DRV_MACSMC=m
+ CONFIG_DMADEVICES=y
+ CONFIG_DMABUF_HEAPS=y
+ CONFIG_DMABUF_HEAPS_SYSTEM=y
++CONFIG_UDMABUF=y
+ CONFIG_APPLE_ADMAC=m
+ CONFIG_DMA_BCM2835=y
+ CONFIG_DMA_SUN6I=m
+-- 
+2.43.0
+

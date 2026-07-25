@@ -1,0 +1,32 @@
+From 71a393d9c536b9572852dba4984ea88467984c38 Mon Sep 17 00:00:00 2001
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Date: Mon, 19 Jan 2026 12:42:30 +0100
+Subject: [PATCH 125/263] arm64: dts: qcom: x1-omnibook-x14: Fix BT RFA supply
+ name
+
+Fix up the supply name to align with bindings.
+
+Reviewed-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+Reviewed-by: Bartosz Golaszewski <bartosz.golaszewski@oss.qualcomm.com>
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260119-topic-wcn6855_pmu_dtbdings-v2-8-6d1c75608bbb@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/x1-hp-omnibook-x14.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1-hp-omnibook-x14.dtsi b/arch/arm64/boot/dts/qcom/x1-hp-omnibook-x14.dtsi
+index 41063948c..13f6d7c9d 100644
+--- a/arch/arm64/boot/dts/qcom/x1-hp-omnibook-x14.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1-hp-omnibook-x14.dtsi
+@@ -1452,7 +1452,7 @@ bluetooth {
+ 		vddbtcmx-supply = <&vreg_pmu_btcmx_0p8>;
+ 		vddrfa0p8-supply = <&vreg_pmu_rfa_0p8>;
+ 		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
+-		vddrfa1p8-supply = <&vreg_pmu_rfa_1p7>;
++		vddrfa1p7-supply = <&vreg_pmu_rfa_1p7>;
+ 	};
+ };
+ 
+-- 
+2.43.0
+

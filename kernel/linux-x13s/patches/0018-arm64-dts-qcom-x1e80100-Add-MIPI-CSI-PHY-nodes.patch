@@ -1,0 +1,128 @@
+From 1bf535fb750ef593f588481efc6e3e117adc7486 Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Fri, 11 Jul 2025 13:58:00 +0100
+Subject: [PATCH 018/263] arm64: dts: qcom: x1e80100: Add MIPI CSI PHY nodes
+
+Add csiphy nodes for
+
+- csiphy0
+- csiphy1
+- csiphy2
+- csiphy4
+
+The irregular naming of the PHYs comes directly from the hardware which for
+whatever reason skipped csiphy3.
+
+Separating the nodes from CAMSS as we have done with the sensor I2C bus aka
+the CCI interface is justified since the CSIPHYs have their own pinouts and
+voltage rails.
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Link: https://patch.msgid.link/20250711-b4-linux-next-25-03-13-dtsi-x1e80100-camss-v7-8-0bc5da82f526@linaro.org
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/boot/dts/qcom/hamoa.dtsi | 88 +++++++++++++++++++++++++++++
+ 1 file changed, 88 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/hamoa.dtsi b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+index 49c4e6be9..3f2195834 100644
+--- a/arch/arm64/boot/dts/qcom/hamoa.dtsi
++++ b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+@@ -5543,6 +5543,94 @@ cci1_i2c1: i2c-bus@1 {
+ 			};
+ 		};
+ 
++		csiphy0: csiphy@ace4000 {
++			compatible = "qcom,x1e80100-mipi-csi2-combo-phy";
++			reg = <0 0x0ace4000 0 0x2000>;
++
++			clocks = <&camcc CAM_CC_CAMNOC_AXI_RT_CLK>,
++				 <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CSIPHY0_CLK>,
++				 <&camcc CAM_CC_CSI0PHYTIMER_CLK>;
++			clock-names = "camnoc_axi",
++				      "cpas_ahb",
++				      "csiphy",
++				      "csiphy_timer";
++
++			interrupts = <GIC_SPI 477 IRQ_TYPE_EDGE_RISING>;
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			#phy-cells = <0>;
++
++			status = "disabled";
++		};
++
++		csiphy1: csiphy@ace6000 {
++			compatible = "qcom,x1e80100-mipi-csi2-combo-phy";
++			reg = <0 0x0ace6000 0 0x2000>;
++
++			clocks = <&camcc CAM_CC_CAMNOC_AXI_RT_CLK>,
++				 <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CSIPHY1_CLK>,
++				 <&camcc CAM_CC_CSI1PHYTIMER_CLK>;
++			clock-names = "camnoc_axi",
++				      "cpas_ahb",
++				      "csiphy",
++				      "csiphy_timer";
++
++			interrupts = <GIC_SPI 478 IRQ_TYPE_EDGE_RISING>;
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			#phy-cells = <0>;
++
++			status = "disabled";
++		};
++
++		csiphy2: csiphy@ace8000 {
++			compatible = "qcom,x1e80100-mipi-csi2-combo-phy";
++			reg = <0 0x0ace8000 0 0x2000>;
++
++			clocks = <&camcc CAM_CC_CAMNOC_AXI_RT_CLK>,
++				 <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CSIPHY2_CLK>,
++				 <&camcc CAM_CC_CSI2PHYTIMER_CLK>;
++			clock-names = "camnoc_axi",
++				      "cpas_ahb",
++				      "csiphy",
++				      "csiphy_timer";
++
++			interrupts = <GIC_SPI 479 IRQ_TYPE_EDGE_RISING>;
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			#phy-cells = <0>;
++
++			status = "disabled";
++		};
++
++		csiphy4: csiphy@acec000 {
++			compatible = "qcom,x1e80100-mipi-csi2-combo-phy";
++			reg = <0 0x0acec000 0 0x2000>;
++
++			clocks = <&camcc CAM_CC_CAMNOC_AXI_RT_CLK>,
++				 <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CSIPHY4_CLK>,
++				 <&camcc CAM_CC_CSI4PHYTIMER_CLK>;
++			clock-names = "camnoc_axi",
++				      "cpas_ahb",
++				      "csiphy",
++				      "csiphy_timer";
++
++			interrupts = <GIC_SPI 122 IRQ_TYPE_EDGE_RISING>;
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			#phy-cells = <0>;
++
++			status = "disabled";
++		};
++
+ 		camcc: clock-controller@ade0000 {
+ 			compatible = "qcom,x1e80100-camcc";
+ 			reg = <0 0x0ade0000 0 0x20000>;
+-- 
+2.43.0
+

@@ -1,0 +1,9 @@
+# libcamera allocates its buffers from the DMA heaps. The ov5675 emits raw Bayer
+# and the debayer happens in libcamera's software ISP, in the user's process --
+# so an ordinary (non-root) user needs access to these nodes or the camera fails
+# to start with an allocation error that says nothing useful.
+#
+# Irrelevant in the live session, which runs as root; this matters on the system
+# the user installs. Same approach Void takes in its x13s-base package.
+ACTION=="add", SUBSYSTEM=="dma_heap", KERNEL=="linux,cma", GROUP="video", MODE="0660", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="dma_heap", KERNEL=="system",    GROUP="video", MODE="0660", TAG+="uaccess"

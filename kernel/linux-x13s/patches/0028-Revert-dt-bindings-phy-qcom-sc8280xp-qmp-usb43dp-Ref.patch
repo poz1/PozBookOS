@@ -1,0 +1,51 @@
+From 9a34d0730989d457fa6fe849bd5a195478e12726 Mon Sep 17 00:00:00 2001
+From: Neil Armstrong <neil.armstrong@linaro.org>
+Date: Mon, 6 Oct 2025 10:49:04 +0200
+Subject: [PATCH 028/263] Revert "dt-bindings: phy: qcom,sc8280xp-qmp-usb43dp:
+ Reference usb-switch.yaml to allow mode-switch"
+
+This reverts commit 3bad7fe22796a420c6e16b591c37ed1bd6cc2a30.
+
+Referencing the usb-switch.yaml also imports the ports definition which
+collides with the definition in the qcom,sc8280xp-qmp-usb43dp bindings
+and also enforces ports as required which breaks DT bidnings check on
+a lot of boards DT.
+
+Until the granularity of the usb-switch.yaml bindings allows us to
+only reference the mode-switch & orientation-switch, it's simpler to
+revert the change and start again.
+
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ .../bindings/phy/qcom,sc8280xp-qmp-usb43dp-phy.yaml        | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb43dp-phy.yaml b/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb43dp-phy.yaml
+index 3d537b7f9..37f30e1b0 100644
+--- a/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb43dp-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb43dp-phy.yaml
+@@ -81,8 +81,10 @@ properties:
+     description:
+       See include/dt-bindings/phy/phy-qcom-qmp.h
+ 
+-  mode-switch: true
+-  orientation-switch: true
++  orientation-switch:
++    description:
++      Flag the PHY as possible handler of USB Type-C orientation switching
++    type: boolean
+ 
+   ports:
+     $ref: /schemas/graph.yaml#/properties/ports
+@@ -179,7 +181,6 @@ required:
+   - "#phy-cells"
+ 
+ allOf:
+-  - $ref: /schemas/usb/usb-switch.yaml#
+   - if:
+       properties:
+         compatible:
+-- 
+2.43.0
+

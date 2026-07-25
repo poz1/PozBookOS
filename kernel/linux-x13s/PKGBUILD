@@ -2,13 +2,13 @@
 # Maintainer: Alex Robinson <alex@ironrobin.net>
 
 buildarch=8
-_stable_tag=v6.18.12
+_stable_tag=v7.1.5
 
 pkgbase=linux-x13s
-_srcname=linux-6.18
+_srcname=linux-7.1
 _kernelname=${pkgbase#linux}
 _desc="ThinkPad X13s (Snapdragon 8cx Gen 3)"
-pkgver="6.18.12"
+pkgver="7.1.5"
 pkgrel=1
 
 _arch=arm64
@@ -48,7 +48,7 @@ prepare() {
 
   cd $_srcname
 
-  echo "Applying X13s patches (from steev's lenovo-x13s-linux-6.18.y)..."
+  echo "Applying X13s patches (from steev's lenovo-x13s-linux-7.0.y, forward-ported to 7.1)..."
   local _patch
   for _patch in "${startdir}"/patches/*.patch; do
     echo "  Applying $(basename ${_patch})..."
@@ -65,6 +65,23 @@ prepare() {
   echo "Applying kernel config..."
   cat "${srcdir}/config" > ./.config
   make LLVM=1 LLVM_IAS=1 ${_cross:+CROSS_COMPILE=$_cross} ARCH=$_arch olddefconfig
+
+  # A hand-edited config silently loses symbols here: this is how
+  # CONFIG_SCHED_EXT=y survived in-tree for months while sched_ext was never
+  # actually built (the real symbol is CONFIG_SCHED_CLASS_EXT), and how
+  # CONFIG_DEFAULT_TCP_CONG="bbr" kept reverting to "cubic".
+  if ! diff -u "${srcdir}/config" ./.config > "${srcdir}/config.diff"; then
+    echo "WARNING: kernel/linux-x13s/config is not what Kconfig produces."
+    echo "         Regenerate it with:"
+    echo "           make LLVM=1 LLVM_IAS=1 ARCH=arm64 olddefconfig"
+    echo "         Symbols dropped:"
+    comm -23 <(grep -oE '^CONFIG_[A-Z0-9_]+' "${srcdir}/config" | sort -u)              <(grep -oE '^CONFIG_[A-Z0-9_]+' ./.config | sort -u) | sed 's/^/           -/'
+    if [[ -n "${POZBOOK_STRICT_CONFIG:-}" ]]; then
+      echo "ERROR: POZBOOK_STRICT_CONFIG is set; refusing to build a kernel that does"
+      echo "       not match the committed config."
+      return 1
+    fi
+  fi
 }
 
 build() {
@@ -86,7 +103,7 @@ build() {
 
   # build!
   unset LDFLAGS
-  make $_llvm_args ${MAKEFLAGS} Image Image.gz modules
+  make $_llvm_args ${MAKEFLAGS} Image modules
   # Generate device tree blobs with symbols to support applying device tree overlays in U-Boot
   make $_llvm_args ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
 }
@@ -102,10 +119,12 @@ _package() {
     'wireless-regdb: to set the correct wireless channels of your country'
     'linux-firmware: firmware images needed for some devices'
     'linux-firmware-qcom: firmware images suggested for qcom devices'
+    'cryptsetup: required by the encrypt hook in the shipped mkinitcpio drop-in'
   )
   provides=("linux=${pkgver}" "WIREGUARD-MODULE")
   conflicts=('linux')
-  backup=("etc/mkinitcpio.d/${pkgbase}.preset")
+  backup=("etc/mkinitcpio.d/${pkgbase}.preset"
+          "etc/mkinitcpio.conf.d/x13s.conf")
   install=${pkgname}.install
 
   cd $_srcname
@@ -113,9 +132,12 @@ _package() {
   local kernver="$(<version)"
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
 
-  echo "Installing boot image (compressed) and dtbs..."
-  install -Dm644 arch/arm64/boot/Image.gz -T "${pkgdir}/boot/vmlinuz-${pkgbase}"
-  install -Dm644 arch/arm64/boot/Image -T "${pkgdir}/boot/vmlinux-${pkgbase}"
+  # On arm64 the EFI stub PE/COFF header lives only in the uncompressed Image.
+  # CONFIG_EFI_ZBOOT is off, so Image.gz is a bare gzip stream that no EFI
+  # bootloader can LoadImage(). Ship the raw Image as vmlinuz-* -- that is also
+  # the only name mkarchiso copies onto the ISO and into the EFI system partition.
+  echo "Installing boot image and dtb..."
+  install -Dm644 arch/arm64/boot/Image -T "${pkgdir}/boot/vmlinuz-${pkgbase}"
   # We just need the X13s dtb
   install -Dm644 arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dtb -t "${pkgdir}/boot"
 
@@ -153,8 +175,8 @@ _package() {
 
 _package-headers() {
   pkgdesc="Header files and scripts for building modules for linux kernel - ${_desc}"
-  provides=("linux-x13s-headers=${pkgver}")
-  conflicts=('linux-x13s-headers')
+  provides=("linux-headers=${pkgver}")
+  conflicts=('linux-headers')
 
   cd $_srcname
   local builddir="$pkgdir/usr/lib/modules/$(<version)/build"

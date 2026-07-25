@@ -1,0 +1,55 @@
+From c03df704cd94c4c5c9abc4eba2eda202203f7c70 Mon Sep 17 00:00:00 2001
+From: Hungyu Lin <dennylin0707@gmail.com>
+Date: Thu, 4 Jun 2026 09:00:58 +0000
+Subject: [PATCH 247/263] media: qcom: iris: fix runtime PM reference leaks
+
+Use pm_runtime_resume_and_get() in iris_enable_power_domains()
+to avoid leaking a runtime PM usage count on failure.
+
+Also ensure pm_runtime_put_sync() is always called in
+iris_disable_power_domains(), even when iris_opp_set_rate()
+fails, so runtime PM references remain balanced.
+
+Fixes: bb8a95aa038e ("media: iris: implement power management")
+Signed-off-by: Hungyu Lin <dennylin0707@gmail.com>
+Link: https://lore.kernel.org/r/20260604090059.46355-2-dennylin0707@gmail.com
+---
+ drivers/media/platform/qcom/iris/iris_resources.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_resources.c b/drivers/media/platform/qcom/iris/iris_resources.c
+index 6b22f5cc8..eb1e8f8d2 100644
+--- a/drivers/media/platform/qcom/iris/iris_resources.c
++++ b/drivers/media/platform/qcom/iris/iris_resources.c
+@@ -78,11 +78,11 @@ int iris_enable_power_domains(struct iris_core *core, struct device *pd_dev)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = pm_runtime_get_sync(pd_dev);
+-	if (ret < 0)
++	ret = pm_runtime_resume_and_get(pd_dev);
++	if (ret)
+ 		return ret;
+ 
+-	return ret;
++	return 0;
+ }
+ 
+ int iris_disable_power_domains(struct iris_core *core, struct device *pd_dev)
+@@ -90,12 +90,10 @@ int iris_disable_power_domains(struct iris_core *core, struct device *pd_dev)
+ 	int ret;
+ 
+ 	ret = iris_opp_set_rate(core->dev, 0);
+-	if (ret)
+-		return ret;
+ 
+ 	pm_runtime_put_sync(pd_dev);
+ 
+-	return 0;
++	return ret;
+ }
+ 
+ static struct clk *iris_get_clk_by_type(struct iris_core *core, enum platform_clk_type clk_type)
+-- 
+2.43.0
+

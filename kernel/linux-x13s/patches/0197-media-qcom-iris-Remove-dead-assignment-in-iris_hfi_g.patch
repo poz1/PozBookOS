@@ -1,0 +1,36 @@
+From 99e63c7129614d28a48ac87fa64f3fbcfbdc528a Mon Sep 17 00:00:00 2001
+From: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Date: Wed, 22 Apr 2026 16:46:37 +0530
+Subject: [PATCH 197/263] media: qcom: iris: Remove dead assignment in
+ iris_hfi_gen2_set_tier()
+
+Fold the ternary initialiser directly into the variable declaration,
+removing the dead store that was immediately overwritten.
+
+Fixes: 2af481a459a4 ("media: iris: Define AV1-specific platform capabilities and properties")
+Signed-off-by: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260422-iris-code-improvement-v1-4-8e150482212d@oss.qualcomm.com
+---
+ drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+index 8e547e390..32b13ea43 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+@@ -600,10 +600,9 @@ static int iris_hfi_gen2_set_tier(struct iris_inst *inst, u32 plane)
+ {
+ 	u32 port = iris_hfi_gen2_get_port(inst, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+ 	struct iris_inst_hfi_gen2 *inst_hfi_gen2 = to_iris_inst_hfi_gen2(inst);
+-	u32 tier = inst->fw_caps[TIER].value;
+-
+-	tier = (inst->codec == V4L2_PIX_FMT_AV1) ? inst->fw_caps[TIER_AV1].value :
++	u32 tier = (inst->codec == V4L2_PIX_FMT_AV1) ? inst->fw_caps[TIER_AV1].value :
+ 							inst->fw_caps[TIER].value;
++
+ 	inst_hfi_gen2->src_subcr_params.tier = tier;
+ 
+ 	return iris_hfi_gen2_session_set_property(inst,
+-- 
+2.43.0
+

@@ -6,7 +6,7 @@ all:
 check: lint
 
 lint:
-	shellcheck -s bash $(wildcard profiles/*/profiledef.sh) \
-	                   profiles/x13s/airootfs/usr/local/bin/ironrobin-setup
+	shellcheck -s bash $(wildcard profiles/*/profiledef.sh)
+	shellcheck -s bash $(wildcard profiles/*/airootfs/usr/local/bin/*)
 
-.PHONY: check lint
+.PHONY: all check lint

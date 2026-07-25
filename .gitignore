@@ -9,3 +9,4 @@ kernel/*/src/
 kernel/*/pkg/
 kernel/*/*.tar.*
 kernel/*/*.log
+container/ArchLinuxARM-aarch64-latest.tar.gz

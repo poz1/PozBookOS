@@ -1,0 +1,252 @@
+From 2149bb5d41ed867f4f8a198d7878fadb1c0b6c9c Mon Sep 17 00:00:00 2001
+From: Ravi Hothi <ravi.hothi@oss.qualcomm.com>
+Date: Wed, 10 Dec 2025 12:21:55 +0530
+Subject: [PATCH 114/263] ASoC: qcom: q6dsp-lpass-ports: Extend
+ q6dsp-lpass-ports driver to support additional sampling rates
+
+Expand the existing constraints in the q6dsp-lpass-ports driver
+to allow a wider range of sampling rates, from 8000 Hz to 192000 Hz.
+This change improves compatibility with diverse audio hardware and
+provides greater flexibility for audio stream configurations.
+
+Signed-off-by: Ravi Hothi <ravi.hothi@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20251210065157.2775514-2-ravi.hothi@oss.qualcomm.com
+---
+ sound/soc/qcom/qdsp6/q6dsp-lpass-ports.c | 73 +++++++++---------------
+ 1 file changed, 27 insertions(+), 46 deletions(-)
+
+diff --git a/sound/soc/qcom/qdsp6/q6dsp-lpass-ports.c b/sound/soc/qcom/qdsp6/q6dsp-lpass-ports.c
+index 4eed54b07..76421adb5 100644
+--- a/sound/soc/qcom/qdsp6/q6dsp-lpass-ports.c
++++ b/sound/soc/qcom/qdsp6/q6dsp-lpass-ports.c
+@@ -10,16 +10,14 @@
+ #define Q6AFE_TDM_PB_DAI(pre, num, did) {				\
+ 		.playback = {						\
+ 			.stream_name = pre" TDM"#num" Playback",	\
+-			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
+-				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
+-				SNDRV_PCM_RATE_176400,			\
++			.rates = SNDRV_PCM_RATE_8000_192000,		\
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S24_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S32_LE,		\
+ 			.channels_min = 1,				\
+ 			.channels_max = 8,				\
+ 			.rate_min = 8000,				\
+-			.rate_max = 176400,				\
++			.rate_max = 192000,				\
+ 		},							\
+ 		.name = #did,						\
+ 		.id = did,						\
+@@ -28,16 +26,14 @@
+ #define Q6AFE_TDM_CAP_DAI(pre, num, did) {				\
+ 		.capture = {						\
+ 			.stream_name = pre" TDM"#num" Capture",		\
+-			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
+-				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
+-				SNDRV_PCM_RATE_176400,			\
++			.rates = SNDRV_PCM_RATE_8000_192000,		\
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S24_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S32_LE,		\
+ 			.channels_min = 1,				\
+ 			.channels_max = 8,				\
+ 			.rate_min = 8000,				\
+-			.rate_max = 176400,				\
++			.rate_max = 192000,				\
+ 		},							\
+ 		.name = #did,						\
+ 		.id = did,						\
+@@ -46,16 +42,14 @@
+ #define Q6AFE_CDC_DMA_RX_DAI(did) {				\
+ 		.playback = {						\
+ 			.stream_name = #did" Playback",	\
+-			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
+-				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
+-				SNDRV_PCM_RATE_176400,			\
++			.rates = SNDRV_PCM_RATE_8000_192000,		\
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S24_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S32_LE,		\
+ 			.channels_min = 1,				\
+ 			.channels_max = 8,				\
+ 			.rate_min = 8000,				\
+-			.rate_max = 176400,				\
++			.rate_max = 192000,				\
+ 		},							\
+ 		.name = #did,						\
+ 		.id = did,						\
+@@ -64,16 +58,14 @@
+ #define Q6AFE_CDC_DMA_TX_DAI(did) {				\
+ 		.capture = {						\
+ 			.stream_name = #did" Capture",		\
+-			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
+-				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
+-				SNDRV_PCM_RATE_176400,			\
++			.rates = SNDRV_PCM_RATE_8000_192000,		\
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S24_LE |		\
+ 				   SNDRV_PCM_FMTBIT_S32_LE,		\
+ 			.channels_min = 1,				\
+ 			.channels_max = 8,				\
+ 			.rate_min = 8000,				\
+-			.rate_max = 176400,				\
++			.rate_max = 192000,				\
+ 		},							\
+ 		.name = #did,						\
+ 		.id = did,						\
+@@ -350,118 +342,108 @@ static struct snd_soc_dai_driver q6dsp_audio_fe_dais[] = {
+ 	}, {
+ 		.playback = {
+ 			.stream_name = "Primary MI2S Playback",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+ 				   SNDRV_PCM_FMTBIT_S24_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = PRIMARY_MI2S_RX,
+ 		.name = "PRI_MI2S_RX",
+ 	}, {
+ 		.capture = {
+ 			.stream_name = "Primary MI2S Capture",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+ 				   SNDRV_PCM_FMTBIT_S24_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = PRIMARY_MI2S_TX,
+ 		.name = "PRI_MI2S_TX",
+ 	}, {
+ 		.playback = {
+ 			.stream_name = "Secondary MI2S Playback",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.name = "SEC_MI2S_RX",
+ 		.id = SECONDARY_MI2S_RX,
+ 	}, {
+ 		.capture = {
+ 			.stream_name = "Secondary MI2S Capture",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+ 				   SNDRV_PCM_FMTBIT_S24_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = SECONDARY_MI2S_TX,
+ 		.name = "SEC_MI2S_TX",
+ 	}, {
+ 		.playback = {
+ 			.stream_name = "Tertiary MI2S Playback",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.name = "TERT_MI2S_RX",
+ 		.id = TERTIARY_MI2S_RX,
+ 	}, {
+ 		.capture = {
+ 			.stream_name = "Tertiary MI2S Capture",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+ 				   SNDRV_PCM_FMTBIT_S24_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = TERTIARY_MI2S_TX,
+ 		.name = "TERT_MI2S_TX",
+ 	}, {
+ 		.playback = {
+ 			.stream_name = "Quaternary MI2S Playback",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.name = "QUAT_MI2S_RX",
+ 		.id = QUATERNARY_MI2S_RX,
+ 	}, {
+ 		.capture = {
+ 			.stream_name = "Quaternary MI2S Capture",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+ 				   SNDRV_PCM_FMTBIT_S24_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = QUATERNARY_MI2S_TX,
+ 		.name = "QUAT_MI2S_TX",
+ 	}, {
+ 		.playback = {
+ 			.stream_name = "Quinary MI2S Playback",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-			SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_96000 |
+-			SNDRV_PCM_RATE_192000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+@@ -473,13 +455,12 @@ static struct snd_soc_dai_driver q6dsp_audio_fe_dais[] = {
+ 	}, {
+ 		.capture = {
+ 			.stream_name = "Quinary MI2S Capture",
+-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
+-				 SNDRV_PCM_RATE_16000,
++			.rates = SNDRV_PCM_RATE_8000_192000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 			.channels_min = 1,
+ 			.channels_max = 8,
+ 			.rate_min =     8000,
+-			.rate_max =     48000,
++			.rate_max =     192000,
+ 		},
+ 		.id = QUINARY_MI2S_TX,
+ 		.name = "QUIN_MI2S_TX",
+-- 
+2.43.0
+

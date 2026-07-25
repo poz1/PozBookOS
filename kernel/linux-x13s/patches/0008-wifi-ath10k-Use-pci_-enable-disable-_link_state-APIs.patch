@@ -1,0 +1,82 @@
+From ce69cc019144a94ea0cd339e08d16e2321bf9994 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Mon, 25 Aug 2025 23:14:43 +0530
+Subject: [PATCH 008/263] wifi: ath10k: Use pci_{enable/disable}_link_state()
+ APIs to enable/disable ASPM states
+
+It is not recommended to enable/disable the ASPM states on the back of the
+PCI core directly using the LNKCTL register. It will break the PCI core's
+knowledge about the device ASPM states. So use the APIs exposed by the PCI
+core to enable/disable ASPM states.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://patch.msgid.link/20250825-ath-aspm-fix-v2-8-61b2f2db7d89@oss.qualcomm.com
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/net/wireless/ath/ath10k/Kconfig |  2 +-
+ drivers/net/wireless/ath/ath10k/pci.c   | 11 ++++-------
+ drivers/net/wireless/ath/ath10k/pci.h   |  5 ++---
+ 3 files changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath10k/Kconfig b/drivers/net/wireless/ath/ath10k/Kconfig
+index 876aed765..02f9a78e2 100644
+--- a/drivers/net/wireless/ath/ath10k/Kconfig
++++ b/drivers/net/wireless/ath/ath10k/Kconfig
+@@ -17,7 +17,7 @@ config ATH10K_CE
+ 
+ config ATH10K_PCI
+ 	tristate "Atheros ath10k PCI support"
+-	depends on ATH10K && PCI
++	depends on ATH10K && PCI && PCIEASPM
+ 	help
+ 	  This module adds support for PCIE bus
+ 
+diff --git a/drivers/net/wireless/ath/ath10k/pci.c b/drivers/net/wireless/ath/ath10k/pci.c
+index 97b49bf4a..c11266cf3 100644
+--- a/drivers/net/wireless/ath/ath10k/pci.c
++++ b/drivers/net/wireless/ath/ath10k/pci.c
+@@ -1966,9 +1966,7 @@ static int ath10k_pci_hif_start(struct ath10k *ar)
+ 	ath10k_pci_irq_enable(ar);
+ 	ath10k_pci_rx_post(ar);
+ 
+-	pcie_capability_clear_and_set_word(ar_pci->pdev, PCI_EXP_LNKCTL,
+-					   PCI_EXP_LNKCTL_ASPMC,
+-					   ar_pci->link_ctl & PCI_EXP_LNKCTL_ASPMC);
++	pci_enable_link_state(ar_pci->pdev, ar_pci->aspm_states);
+ 
+ 	return 0;
+ }
+@@ -2823,10 +2821,9 @@ static int ath10k_pci_hif_power_up(struct ath10k *ar,
+ 
+ 	ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot hif power up\n");
+ 
+-	pcie_capability_read_word(ar_pci->pdev, PCI_EXP_LNKCTL,
+-				  &ar_pci->link_ctl);
+-	pcie_capability_clear_word(ar_pci->pdev, PCI_EXP_LNKCTL,
+-				   PCI_EXP_LNKCTL_ASPMC);
++	ar_pci->aspm_states = pcie_aspm_enabled(ar_pci->pdev);
++
++	pci_disable_link_state(ar_pci->pdev, PCIE_LINK_STATE_ALL);
+ 
+ 	/*
+ 	 * Bring the target up cleanly.
+diff --git a/drivers/net/wireless/ath/ath10k/pci.h b/drivers/net/wireless/ath/ath10k/pci.h
+index 4c3f536f2..5f3e57392 100644
+--- a/drivers/net/wireless/ath/ath10k/pci.h
++++ b/drivers/net/wireless/ath/ath10k/pci.h
+@@ -128,10 +128,9 @@ struct ath10k_pci {
+ 	struct timer_list rx_post_retry;
+ 
+ 	/* Due to HW quirks it is recommended to disable ASPM during device
+-	 * bootup. To do that the original PCI-E Link Control is stored before
+-	 * device bootup is executed and re-programmed later.
++	 * bootup. To do that the ASPM states are saved and re-programmed later.
+ 	 */
+-	u16 link_ctl;
++	u32 aspm_states;
+ 
+ 	/* Protects ps_awake and ps_wake_refcount */
+ 	spinlock_t ps_lock;
+-- 
+2.43.0
+

@@ -1,0 +1,26 @@
+From e32d343d47356609a15e91735da89f03b770aa8b Mon Sep 17 00:00:00 2001
+From: Abel Vesa <abel.vesa@linaro.org>
+Date: Fri, 8 Aug 2025 11:09:43 +0000
+Subject: [PATCH 060/263] arm64: defconfig: Build OmniVision OV02C10 as module
+
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 9d3d57be1..6f36023a5 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -941,6 +941,7 @@ CONFIG_VIDEO_TI_J721E_CSI2RX=m
+ CONFIG_VIDEO_HANTRO=m
+ CONFIG_VIDEO_IMX219=m
+ CONFIG_VIDEO_IMX412=m
++CONFIG_VIDEO_OV02C10=m
+ CONFIG_VIDEO_OV02E10=m
+ CONFIG_VIDEO_OV08X40=m
+ CONFIG_VIDEO_OV5640=m
+-- 
+2.43.0
+

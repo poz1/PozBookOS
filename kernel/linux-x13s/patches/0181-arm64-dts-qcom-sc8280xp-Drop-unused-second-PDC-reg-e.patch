@@ -1,0 +1,32 @@
+From 1019264082ac9db42d7a2c746394b59473af6902 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:10 +0530
+Subject: [PATCH 181/263] arm64: dts: qcom: sc8280xp: Drop unused second PDC
+ reg entry
+
+The PDC driver only maps the first register region (APSS DRV) via
+of_address_to_resource(node, 0, ...). The second reg entry was never
+accessed by the driver and can be removed.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-34-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index e60c90968..9ea653295 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -5194,7 +5194,7 @@ dispcc0: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sc8280xp-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x10000>, <0 0x17c000f0 0 0x60>;
++			reg = <0 0x0b220000 0 0x10000>;
+ 			qcom,pdc-ranges = <0 480 40>,
+ 					  <40 140 14>,
+ 					  <54 263 1>,
+-- 
+2.43.0
+

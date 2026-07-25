@@ -1,0 +1,64 @@
+From ae5fe19fefaec5bd3012b8bd748eca10e033c650 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Mon, 20 Apr 2026 17:05:48 +0200
+Subject: [PATCH 208/263] efi: sysfb_set_efifb_fwnode: Use simple-framebuffer
+ DT node if available
+
+EFI platforms may use DTB files to describe the hardware. In this case
+DTB file may contain a (template) simple-framebuffer compatible DT node
+which lists resources (clocks, regulators, etc.) which are required to
+keep the firmware provided EFIFB working.
+
+Make sysfb_set_efifb_fwnode() check for a simple-framebuffer DT node and
+set this as the sysfs device's of_node so that the simple[drm|fb] /
+efidrm drivers can acquire the listed resources to avoid these getting
+turned off.
+
+If a DT aware bootloader like u-boot is used and this has fully populated
+(adding framebuffer base-address and format) the simple-framebuffer DT node
+then of_platform_default_populate_init() will have called sysfb_disable()
+and sysfb_set_efifb_fwnode() will never get called.
+
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ drivers/firmware/efi/sysfb_efi.c | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/firmware/efi/sysfb_efi.c b/drivers/firmware/efi/sysfb_efi.c
+index 4c3986ddc..24c22cb5d 100644
+--- a/drivers/firmware/efi/sysfb_efi.c
++++ b/drivers/firmware/efi/sysfb_efi.c
+@@ -429,9 +429,29 @@ __init void sysfb_apply_efi_quirks(struct screen_info *si)
+ 
+ __init void sysfb_set_efifb_fwnode(const struct screen_info *si, struct platform_device *pd)
+ {
+-	if (si->orig_video_isVGA == VIDEO_TYPE_EFI && IS_ENABLED(CONFIG_PCI)) {
++	struct device_node *node;
++
++	if (si->orig_video_isVGA != VIDEO_TYPE_EFI)
++		return;
++
++	if (IS_ENABLED(CONFIG_PCI)) {
+ 		fwnode_init(&efifb_fwnode, &efifb_fwnode_ops);
+ 		pd->dev.fwnode = &efifb_fwnode;
+ 	}
++
++	/*
++	 * If a fully populated simple-framebuffer DT node is found, then
++	 * of_platform_default_populate_init() will call sysfb_disable()
++	 * and we never get here.
++	 *
++	 * If there is just a template simple-framebuffer DT node (without
++	 * framebuffer base-address and format), that is still useful to
++	 * have as of_node for the sysfb driver since it contains a list
++	 * of resources (clocks, regulators, etc.) which need to be kept
++	 * on to keep the firmware provided EFIFB working.
++	 */
++	node = of_get_compatible_child(of_chosen, "simple-framebuffer");
++	device_add_of_node(&pd->dev, node);
++	of_node_put(node);
+ }
+ #endif
+-- 
+2.43.0
+

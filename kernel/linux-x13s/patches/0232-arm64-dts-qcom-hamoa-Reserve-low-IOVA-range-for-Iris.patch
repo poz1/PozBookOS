@@ -1,0 +1,63 @@
+From 9e035576281184629a95e4ee96480f0a44f4a877 Mon Sep 17 00:00:00 2001
+From: Daniel J Blueman <daniel@quora.org>
+Date: Mon, 1 Jun 2026 12:13:34 +0800
+Subject: [PATCH 232/263] arm64: dts: qcom: hamoa: Reserve low IOVA range for
+ Iris
+
+On X1-family hamoa platforms, Iris DMA below IOVA 0x25800000 (600MB)
+triggers unhandled SMMU page faults that cause spontaneous device
+reboots. This is readily reproduced with web pages that drive
+multiple concurrent video decode streams, eg ui.com.
+
+Add a reserved-memory IOVA reservation node covering [0, 0x25800000)
+and reference it from the Iris node so the IOMMU layer keeps DMA
+allocations above that boundary.
+
+This applies to all current hamoa.dtsi consumers (X1E80100/X1P42100/
+X1P64100 boards); other Iris-bearing SoCs (sm8550/sm8650/sa8775p/
+qcs8300) do not include hamoa.dtsi thus not affected.
+
+Backports also require the preceding binding patch ("dt-bindings:
+media: qcom,sm8550-iris: Allow IOVA reservation memory-region");
+without it, dtbs_check rejects the second memory-region entry.
+
+Link: https://github.com/qualcomm-linux/kernel-topics/issues/1157#issuecomment-4458933574
+Cc: stable@vger.kernel.org
+Signed-off-by: Daniel J Blueman <daniel@quora.org>
+Link: https://lore.kernel.org/r/20260601041336.9497-2-daniel@quora.org
+---
+ arch/arm64/boot/dts/qcom/hamoa.dtsi | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/hamoa.dtsi b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+index 376ea3a54..883a4d07f 100644
+--- a/arch/arm64/boot/dts/qcom/hamoa.dtsi
++++ b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+@@ -706,6 +706,15 @@ smem_mem: smem@ffe00000 {
+ 			hwlocks = <&tcsr_mutex 3>;
+ 			no-map;
+ 		};
++
++		/*
++		 * Iris DMA below IOVA 0x25800000 triggers unhandled SMMU
++		 * faults on hamoa platforms; reserve the range so the IOMMU
++		 * layer keeps allocations above this boundary.
++		 */
++		iris_iova: iris-iova {
++			iommu-addresses = <&iris 0x0 0x0 0x0 0x25800000>;
++		};
+ 	};
+ 
+ 	qup_opp_table_100mhz: opp-table-qup100mhz {
+@@ -5398,7 +5407,7 @@ &config_noc SLAVE_VENUS_CFG QCOM_ICC_TAG_ACTIVE_ONLY>,
+ 			interconnect-names = "cpu-cfg",
+ 					     "video-mem";
+ 
+-			memory-region = <&video_mem>;
++			memory-region = <&video_mem>, <&iris_iova>;
+ 
+ 			resets = <&gcc GCC_VIDEO_AXI0_CLK_ARES>;
+ 			reset-names = "bus";
+-- 
+2.43.0
+

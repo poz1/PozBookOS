@@ -1,0 +1,42 @@
+From 2070f54a731086d58604860f2a975266453559f1 Mon Sep 17 00:00:00 2001
+From: Ekansh Gupta <ekansh.gupta@oss.qualcomm.com>
+Date: Sat, 18 Apr 2026 11:38:15 +0530
+Subject: [PATCH 192/263] arm64: dts: qcom: hamoa: add audio PD remote heap
+ region
+
+Reference the reserved memory region for audio PD dynamic loading
+and remote heap requirements. Add the required VMID list for memory
+ownership transfers.
+
+Signed-off-by: Ekansh Gupta <ekansh.gupta@oss.qualcomm.com>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260418-hamoaaudio-v1-1-a92866f744a6@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/hamoa.dtsi | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/hamoa.dtsi b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+index 85cc8f067..376ea3a54 100644
+--- a/arch/arm64/boot/dts/qcom/hamoa.dtsi
++++ b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+@@ -12,6 +12,7 @@
+ #include <dt-bindings/clock/qcom,x1e80100-gpucc.h>
+ #include <dt-bindings/clock/qcom,x1e80100-tcsr.h>
+ #include <dt-bindings/dma/qcom-gpi.h>
++#include <dt-bindings/firmware/qcom,scm.h>
+ #include <dt-bindings/interconnect/qcom,icc.h>
+ #include <dt-bindings/interconnect/qcom,x1e80100-rpmh.h>
+ #include <dt-bindings/interrupt-controller/arm-gic.h>
+@@ -4244,6 +4245,9 @@ fastrpc {
+ 					compatible = "qcom,fastrpc";
+ 					qcom,glink-channels = "fastrpcglink-apps-dsp";
+ 					label = "adsp";
++					memory-region = <&adsp_rpc_remote_heap_mem>;
++					qcom,vmids = <QCOM_SCM_VMID_LPASS
++						      QCOM_SCM_VMID_ADSP_HEAP>;
+ 					qcom,non-secure-domain;
+ 					#address-cells = <1>;
+ 					#size-cells = <0>;
+-- 
+2.43.0
+

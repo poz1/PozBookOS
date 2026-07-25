@@ -1,0 +1,42 @@
+From b25778d7ed063f1877a40840dcbb5633a6977402 Mon Sep 17 00:00:00 2001
+From: Abel Vesa <abel.vesa@linaro.org>
+Date: Thu, 22 May 2025 11:39:44 +0300
+Subject: [PATCH 036/263] arm64: dts: qcom: x1e80100-dell-xps13-9345: Disable
+ the debug UART
+
+The Dell XPS13 is an end-user product, so it most likely doesn't have
+the debug UART enabled. So don't enable it in the board dts either.
+
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts b/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
+index 54dbfb540..e22e1ce94 100644
+--- a/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
++++ b/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
+@@ -21,7 +21,6 @@ / {
+ 	chassis-type = "laptop";
+ 
+ 	aliases {
+-		serial0 = &uart21;
+ 		serial1 = &uart14;
+ 	};
+ 
+@@ -1412,11 +1411,6 @@ bluetooth {
+ 	};
+ };
+ 
+-&uart21 {
+-	compatible = "qcom,geni-debug-uart";
+-	status = "okay";
+-};
+-
+ &usb_1_ss0_hsphy {
+ 	vdd-supply = <&vreg_l3j_0p8>;
+ 	vdda12-supply = <&vreg_l2j_1p2>;
+-- 
+2.43.0
+

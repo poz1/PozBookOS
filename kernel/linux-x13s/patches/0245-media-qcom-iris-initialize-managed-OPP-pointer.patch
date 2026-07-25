@@ -1,0 +1,32 @@
+From 0d043439069f998463cf562cf143f34cba51e314 Mon Sep 17 00:00:00 2001
+From: Hungyu Lin <dennylin0707@gmail.com>
+Date: Thu, 4 Jun 2026 00:04:14 +0000
+Subject: [PATCH 245/263] media: qcom: iris: initialize managed OPP pointer
+
+Initialize the __free(put_opp) managed OPP pointer to NULL.
+
+This ensures the cleanup handler always sees a defined value and
+avoids leaving the managed pointer uninitialized before assignment.
+
+Signed-off-by: Hungyu Lin <dennylin0707@gmail.com>
+Link: https://lore.kernel.org/r/20260604000414.32530-1-dennylin0707@gmail.com
+---
+ drivers/media/platform/qcom/iris/iris_resources.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_resources.c b/drivers/media/platform/qcom/iris/iris_resources.c
+index 773f65483..6b22f5cc8 100644
+--- a/drivers/media/platform/qcom/iris/iris_resources.c
++++ b/drivers/media/platform/qcom/iris/iris_resources.c
+@@ -61,7 +61,7 @@ int iris_unset_icc_bw(struct iris_core *core)
+ 
+ int iris_opp_set_rate(struct device *dev, unsigned long freq)
+ {
+-	struct dev_pm_opp *opp __free(put_opp);
++	struct dev_pm_opp *opp __free(put_opp) = NULL;
+ 
+ 	opp = devfreq_recommended_opp(dev, &freq, 0);
+ 	if (IS_ERR(opp))
+-- 
+2.43.0
+

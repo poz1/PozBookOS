@@ -4,7 +4,7 @@
 
 This document covers all optimizations applied to PozBookOS, an Arch Linux ARM
 distribution for the Lenovo ThinkPad X13s (Qualcomm Snapdragon 8cx Gen 3 /
-SC8280XP, Cortex-X1 + Cortex-A78, Adreno 660 GPU).
+SC8280XP, Cortex-X1 + Cortex-A78, Adreno 690 GPU).
 
 The changes span three areas:
 1. **Kernel build system** -- moved from steev's fork to mainline + patches
@@ -30,29 +30,26 @@ git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux
 for _patch in patches/*.patch; do patch -Np1 -i "$_patch"; done
 ```
 
-### 186 patches extracted from steev's branch
+### 256 patches from steev's branch
 
 **Directory:** `kernel/linux-x13s/patches/`
 
-All 186 commits from steev's `lenovo-x13s-linux-6.18.y` branch (on top of
-v6.18.12 stable) were extracted as individual `.patch` files. These are applied
-in order during `makepkg`.
+The X13s delta of steev's `lenovo-x13s-linux-7.0.y` branch (263 commits on top of
+Linux 7.0.14) was extracted and forward-ported to v7.1.5. 256 apply, 4 were
+already in 7.1.5, and 3 were dropped deliberately (ath12k, the arm64 defconfig
+change, and an smp2p patch superseded upstream). They are applied in order
+during `makepkg`, and every one applies with plain `patch -Np1`.
 
-Patch breakdown by category:
+The previous edition of this document listed a per-category breakdown summing to
+186. That number never matched the tree and the breakdown was not derived from
+the patch subjects; it has been removed rather than replaced with another
+unverified table. Run this to get the real picture:
 
-| Count | Category |
-|------:|----------|
-| 42 | Video acceleration (IRIS/Venus codec -- H.264/H.265/AV1 encode/decode) |
-| 39 | Device tree fixes (BT power, display OPP, EC node, video firmware) |
-| 23 | Qualcomm PHY / USB-C fixes (DP alt mode, runtime PM crash fixes) |
-| 23 | Config / defconfig changes (ZRAM, sched_ext, WireGuard, UHID) |
-| 17 | Remoteproc / SoC subsystem (modem attach, SMP2P, EL2 support) |
-| 8 | WiFi / Bluetooth fixes (ath11k, QCA HFP offload, QRTR race) |
-| 7 | Display / GPU fixes (eDP 1.4+, DP lane mapping, gamma LUT, GPU recovery) |
-| 5 | PCI / ASPM fixes (L1.2 exit timing, enable/disable API fixes) |
-| 4 | Audio fixes (extended PCM formats and sample rates) |
-| 3 | ThinkPad EC driver (keyboard backlight, suspend hooks, X13s bits) |
-| 15 | Other (IOMMU, clock, DT bindings, panel, camera, firmware loading) |
+```sh
+for p in kernel/linux-x13s/patches/*.patch; do
+  sed -n 's/^Subject: \(\[PATCH[^]]*\] \)\?//p' "$p" | head -1
+done | cut -d: -f1 | sort | uniq -c | sort -rn
+```
 
 ---
 
@@ -193,7 +190,7 @@ Disabled 12 more errata for CPUs not in the SC8280XP:
 | `CONFIG_VGA_ARB` | `y` | `n` | Legacy VGA arbitration. Adreno is not VGA. |
 | `CONFIG_ARM_SMMU_V3` | `y` | `n` | SC8280XP uses SMMUv2, not v3. |
 | `CONFIG_ARM_GIC_V2M` | `y` | `n` | SC8280XP uses GICv3 with ITS. |
-| `CONFIG_DRM_MALI_DISPLAY` | `m` | `n` | No Mali GPU. Adreno 660. |
+| `CONFIG_DRM_MALI_DISPLAY` | `m` | `n` | No Mali GPU. Adreno 690. |
 | `CONFIG_VIRTIO` | `y` | `n` | Bare metal, not a VM. |
 | `CONFIG_LEGACY_PTYS` | `y` | `n` | Replaced by Unix98 PTYs. |
 | `CONFIG_LEGACY_TIOCSTI` | `y` | `n` | Security risk, no modern software needs it. |
@@ -342,10 +339,16 @@ Removed support for formats not used by this system:
 
 ```
 quiet loglevel=3 audit=0 efi=noruntime pd_ignore_unused clk_ignore_unused
-arm64.nopauth zswap.enabled=0 nowatchdog nmi_watchdog=0
-workqueue.power_efficient=1 pcie_aspm.policy=powersupersave
-mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
+arm64.nopauth nowatchdog pcie_aspm.policy=powersupersave
+mem_sleep_default=s2idle cryptomgr.notests cpuidle.governor=teo
 ```
+
+This is the command line that is actually in the loader entry. Earlier editions
+of this document listed `zswap.enabled=0`, `nmi_watchdog=0`,
+`workqueue.power_efficient=1` and `init_on_alloc=0` as well; none of them were
+ever there. `nmi_watchdog` is an x86 knob, `zswap` is already off by default in
+the config (`# CONFIG_ZSWAP_DEFAULT_ON is not set`), and `init_on_alloc=0` would
+have turned off a hardening feature that is deliberately left on.
 
 | Parameter | Purpose |
 |-----------|---------|
@@ -354,10 +357,9 @@ mem_sleep_default=s2idle init_on_alloc=0 cryptomgr.notests
 | `efi=noruntime` | Skip EFI runtime services. |
 | `pd_ignore_unused` | Skip unused power domain checks. |
 | `clk_ignore_unused` | Skip unused clock checks. |
-| `arm64.nopauth` | Disable Pointer Auth (X1/A78 lack FEAT_HAFT). |
-| `zswap.enabled=0` | Disable zswap (using zram instead). |
+| `arm64.nopauth` | Disable Pointer Auth (Lenovo firmware bug). |
+| `cpuidle.governor=teo` | Timer-events-oriented cpuidle governor. |
 | `nowatchdog` | Disable watchdog timers. |
-| `nmi_watchdog=0` | Disable NMI watchdog. |
 | `workqueue.power_efficient=1` | Route work to active CPUs, let idle cores sleep. |
 | `pcie_aspm.policy=powersupersave` | Deepest PCIe link power savings. |
 | `mem_sleep_default=s2idle` | Default to s2idle (only working suspend on X13s). |
@@ -542,7 +544,7 @@ application launches from the live squashfs filesystem.
 
 **Enabled:**
 - `irqbalance.service` -- distribute IRQs across all 8 cores
-- `earlyoom.service` -- proactive OOM killer using PSI
+- `earlyoom.service` -- proactive OOM killer (polls MemAvailable; it does not use PSI)
 
 **Removed** (VM/hypervisor services that fail on bare metal):
 - `hv_fcopy_daemon.service`
@@ -559,10 +561,9 @@ application launches from the live squashfs filesystem.
 
 **File:** `profiles/x13s/packages.aarch64`
 
-**Added (4):**
+**Added:**
 - `irqbalance` -- IRQ distribution across CPUs
 - `powertop` -- power diagnostics
-- `fwupd` -- firmware update daemon
 - `earlyoom` -- proactive OOM prevention
 
 **Removed (10):**
@@ -584,7 +585,7 @@ application launches from the live squashfs filesystem.
 | Category | Count |
 |----------|------:|
 | Kernel config options changed | 167 |
-| Kernel patches extracted | 186 |
+| Kernel patches extracted | 256 |
 | Systemd services added | 2 |
 | Systemd services removed | 11 |
 | Packages added | 4 |

@@ -1,0 +1,31 @@
+From 3c8ab47517a2776bd1cac8370308c575986a691f Mon Sep 17 00:00:00 2001
+From: Xilin Wu <sophon@radxa.com>
+Date: Thu, 7 May 2026 22:54:22 +0800
+Subject: [PATCH 220/263] arm64: dts: qcom: sc8280xp: Add missing
+ qcom,non-secure-domain property
+
+By default the DSP domains are secure, add the missing
+qcom,non-secure-domain property to mark them as non-secure.
+
+Fixes: 152d1faf1e2f ("arm64: dts: qcom: add SC8280XP platform")
+Signed-off-by: Xilin Wu <sophon@radxa.com>
+Link: https://lore.kernel.org/r/20260507-sc8280xp-non-secure-domain-v1-1-b6f75783c831@radxa.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index e48e1b973..547797cc0 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -6850,6 +6850,7 @@ fastrpc {
+ 					compatible = "qcom,fastrpc";
+ 					qcom,glink-channels = "fastrpcglink-apps-dsp";
+ 					label = "cdsp";
++					qcom,non-secure-domain;
+ 					#address-cells = <1>;
+ 					#size-cells = <0>;
+ 
+-- 
+2.43.0
+

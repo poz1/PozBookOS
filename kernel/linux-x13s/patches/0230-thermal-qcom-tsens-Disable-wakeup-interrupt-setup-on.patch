@@ -1,0 +1,105 @@
+From d2b1dbf4c1b154425ced562af61df1b621b29ed9 Mon Sep 17 00:00:00 2001
+From: Priyansh Jain <priyansh.jain@oss.qualcomm.com>
+Date: Mon, 1 Jun 2026 12:07:57 +0530
+Subject: [PATCH 230/263] thermal: qcom: tsens: Disable wakeup interrupt setup
+ on automotive targets
+
+Add a no_irq_wake flag to struct tsens_plat_data to allow platforms
+to control whether TSENS interrupts should be configured as wakeup
+sources.
+
+Create a new data_automotive structure and add compatible strings for
+automotive TSENS variants (SA8775P, SA8255P) with wakeup interrupts
+disabled.
+
+Automotive platforms can enter a low-power parking suspend state where the
+application processors and thermal mitigation paths are not active. In this
+state, waking the system due to TSENS threshold interrupts does not enable
+useful thermal action, but it does repeatedly break suspend residency and
+increase battery drain.
+
+Allow these automotive variants to keep TSENS monitoring enabled during
+normal runtime while opting out of TSENS wakeup interrupts during suspend,
+so the system can remain in low power until ignition/resume.
+
+Signed-off-by: Priyansh Jain <priyansh.jain@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260601-tsens_interrupt_wake_control-v2-2-ce9570946abd@oss.qualcomm.com
+---
+ drivers/thermal/qcom/tsens-v2.c | 8 ++++++++
+ drivers/thermal/qcom/tsens.c    | 8 +++++++-
+ drivers/thermal/qcom/tsens.h    | 5 +++++
+ 3 files changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/thermal/qcom/tsens-v2.c b/drivers/thermal/qcom/tsens-v2.c
+index e06f8e580..2ee117aa9 100644
+--- a/drivers/thermal/qcom/tsens-v2.c
++++ b/drivers/thermal/qcom/tsens-v2.c
+@@ -306,3 +306,11 @@ struct tsens_plat_data data_8996 = {
+ 	.feat		= &tsens_v2_feat,
+ 	.fields	= tsens_v2_regfields,
+ };
++
++/* Do not enable wakeup capable interrupts for automotive platforms */
++struct tsens_plat_data data_automotive_v2 = {
++	.ops		= &ops_generic_v2,
++	.feat		= &tsens_v2_feat,
++	.fields		= tsens_v2_regfields,
++	.no_irq_wake = true,
++};
+diff --git a/drivers/thermal/qcom/tsens.c b/drivers/thermal/qcom/tsens.c
+index 5210985b3..6237e0006 100644
+--- a/drivers/thermal/qcom/tsens.c
++++ b/drivers/thermal/qcom/tsens.c
+@@ -1169,6 +1169,12 @@ static const struct of_device_id tsens_table[] = {
+ 	}, {
+ 		.compatible = "qcom,tsens-v2",
+ 		.data = &data_tsens_v2,
++	}, {
++		.compatible = "qcom,sa8775p-tsens",
++		.data = &data_automotive_v2,
++	}, {
++		.compatible = "qcom,sa8255p-tsens",
++		.data = &data_automotive_v2,
+ 	},
+ 	{}
+ };
+@@ -1381,7 +1387,7 @@ static int tsens_probe(struct platform_device *pdev)
+ 
+ 	platform_set_drvdata(pdev, priv);
+ 
+-	device_init_wakeup(dev, true);
++	device_init_wakeup(dev, !data->no_irq_wake);
+ 
+ 	if (!priv->ops || !priv->ops->init || !priv->ops->get_temp)
+ 		return -EINVAL;
+diff --git a/drivers/thermal/qcom/tsens.h b/drivers/thermal/qcom/tsens.h
+index 5e2da4e0d..d20d514bf 100644
+--- a/drivers/thermal/qcom/tsens.h
++++ b/drivers/thermal/qcom/tsens.h
+@@ -531,6 +531,7 @@ struct tsens_features {
+  * @hw_ids: Subset of sensors ids supported by platform, if not the first n
+  * @feat: features of the IP
+  * @fields: bitfield locations
++ * @no_irq_wake: if set, TSENS interrupts will not be configured as wakeup sources
+  */
+ struct tsens_plat_data {
+ 	const u32		num_sensors;
+@@ -538,6 +539,7 @@ struct tsens_plat_data {
+ 	unsigned int		*hw_ids;
+ 	struct tsens_features	*feat;
+ 	const struct reg_field		*fields;
++	bool		no_irq_wake;
+ };
+ 
+ /**
+@@ -675,4 +677,7 @@ extern const struct tsens_plat_data data_ipq5018;
+ extern struct tsens_plat_data data_8996, data_ipq8074, data_tsens_v2;
+ extern const struct tsens_plat_data data_ipq5332, data_ipq5424;
+ 
++/* TSENS automotive targets */
++extern struct tsens_plat_data data_automotive_v2;
++
+ #endif /* __QCOM_TSENS_H__ */
+-- 
+2.43.0
+

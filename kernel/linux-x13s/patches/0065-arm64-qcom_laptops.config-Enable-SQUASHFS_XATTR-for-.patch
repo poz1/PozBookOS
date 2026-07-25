@@ -1,0 +1,32 @@
+From e111fd96eb999392430383159f11bb5d6d916d5f Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Tue, 7 Oct 2025 17:17:45 +0900
+Subject: [PATCH 065/263] arm64: qcom_laptops.config: Enable SQUASHFS_XATTR for
+ distros
+
+Some distros, e.g. Ubuntu LiveCD, use extended attributes in squashfs
+images.  It also might be necessary for distros using SELinux.  Enable
+it, requested by Steev.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index 807d12841..f8b969870 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -61,6 +61,7 @@ CONFIG_DM_CRYPT=m
+ CONFIG_DMABUF_HEAPS_CMA=y
+ 
+ # For Ubuntu/snap
++CONFIG_SQUASHFS_XATTR=y
+ CONFIG_SQUASHFS_LZ4=y
+ CONFIG_SQUASHFS_LZO=y
+ CONFIG_SQUASHFS_XZ=y
+-- 
+2.43.0
+

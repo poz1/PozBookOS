@@ -1,0 +1,30 @@
+From 6d94fc00e3c38ad712567c69c3f6a89f74c69993 Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Thu, 14 Mar 2024 14:03:18 +0000
+Subject: [PATCH 055/263] arm64: defconfig: Switch on
+ CONFIG_DMABUF_HEAPS_SYSTEM
+
+libcamera softisp requires this.
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 52f1433ab..dd5f94b65 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1366,6 +1366,7 @@ CONFIG_RTC_DRV_NVIDIA_VRS10=m
+ CONFIG_RTC_DRV_MACSMC=m
+ CONFIG_DMADEVICES=y
+ CONFIG_DMABUF_HEAPS=y
++CONFIG_DMABUF_HEAPS_SYSTEM=y
+ CONFIG_APPLE_ADMAC=m
+ CONFIG_DMA_BCM2835=y
+ CONFIG_DMA_SUN6I=m
+-- 
+2.43.0
+

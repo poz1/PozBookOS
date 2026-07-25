@@ -1,0 +1,70 @@
+--- a/usr/bin/mkarchiso	2026-07-25 17:25:49.762192725 +0000
++++ b/usr/bin/mkarchiso	2026-07-25 17:25:49.786560979 +0000
+@@ -49,6 +49,7 @@
+ # adapted from GRUB_EARLY_INITRD_LINUX_STOCK in https://git.savannah.gnu.org/cgit/grub.git/tree/util/grub-mkconfig.in
+ readonly ucodes=('intel-uc.img' 'intel-ucode.img' 'amd-uc.img' 'amd-ucode.img' 'early_ucode.cpio' 'microcode.cpio')
+ declare -i need_external_ucodes=0
++dtb=''
+ readonly -A uefi_arch=(
+     ['x86_64']='x64'
+     ['aarch64']='AA64'
+@@ -435,6 +436,9 @@
+     install -d -m 0755 -- "${isofs_dir}/${install_dir}/boot/${arch}"
+     install -m 0644 -- "${pacstrap_dir}/boot/initramfs-"*".img" "${isofs_dir}/${install_dir}/boot/${arch}/"
+     install -m 0644 -- "${pacstrap_dir}/boot/vmlinuz-"* "${isofs_dir}/${install_dir}/boot/${arch}/"
++    if [[ -n "${dtb}" && -e "${pacstrap_dir}/boot/${dtb}" ]]; then
++        install -m 0644 -- "${pacstrap_dir}/boot/${dtb}" "${isofs_dir}/${install_dir}/boot/${arch}/"
++    fi
+ 
+     if (( need_external_ucodes )); then
+         for ucode_image in "${ucodes[@]}"; do
+@@ -459,6 +463,7 @@
+         sed "s|%ARCHISO_LABEL%|${iso_label}|g;
+              s|%ARCHISO_UUID%|${iso_uuid}|g;
+              s|%INSTALL_DIR%|${install_dir}|g;
++             s|%DTB%|${dtb}|g;
+              s|%ARCH%|${arch}|g" \
+             "${_cfg}" >"${isofs_dir}/boot/syslinux/${_cfg##*/}"
+     done
+@@ -509,6 +514,9 @@
+         "::/${install_dir}" "::/${install_dir}/boot" "::/${install_dir}/boot/${arch}"
+     mcopy -i "${efibootimg}" "${pacstrap_dir}/boot/vmlinuz-"* \
+         "${pacstrap_dir}/boot/initramfs-"*".img" "::/${install_dir}/boot/${arch}/"
++    if [[ -n "${dtb}" && -e "${pacstrap_dir}/boot/${dtb}" ]]; then
++        mcopy -i "${efibootimg}" "${pacstrap_dir}/boot/${dtb}" "::/${install_dir}/boot/${arch}/"
++    fi
+     if (( need_external_ucodes )); then
+         for ucode_image in "${ucodes[@]}"; do
+             if [[ -e "${pacstrap_dir}/boot/${ucode_image}" ]]; then
+@@ -582,6 +590,7 @@
+         sed "s|%ARCHISO_LABEL%|${iso_label}|g;
+              s|%ARCHISO_UUID%|${iso_uuid}|g;
+              s|%INSTALL_DIR%|${install_dir}|g;
++             s|%DTB%|${dtb}|g;
+              s|%ARCH%|${arch}|g;
+              s|%ARCHISO_SEARCH_FILENAME%|${search_filename}|g" \
+             "${_cfg}" >"${work_dir}/grub/${_cfg##*/}"
+@@ -663,6 +672,7 @@
+         sed "s|%ARCHISO_LABEL%|${iso_label}|g;
+              s|%ARCHISO_UUID%|${iso_uuid}|g;
+              s|%INSTALL_DIR%|${install_dir}|g;
++             s|%DTB%|${dtb}|g;
+              s|%ARCH%|${arch}|g;
+              s|%ARCHISO_SEARCH_FILENAME%|${search_filename}|g" \
+             "${profile}/grub/loopback.cfg" >"${isofs_dir}/boot/grub/loopback.cfg"
+@@ -835,6 +845,7 @@
+         sed "s|%ARCHISO_LABEL%|${iso_label}|g;
+              s|%ARCHISO_UUID%|${iso_uuid}|g;
+              s|%INSTALL_DIR%|${install_dir}|g;
++             s|%DTB%|${dtb}|g;
+              s|%ARCH%|${arch}|g" \
+             "${_conf}" >"${work_dir}/loader/entries/${_conf##*/}"
+     done
+@@ -852,6 +863,7 @@
+                     "${work_dir}/loader/"
+                     "${pacstrap_dir}/boot/vmlinuz-"*
+                     "${pacstrap_dir}/boot/initramfs-"*".img"
++                   ${dtb:+"${pacstrap_dir}/boot/${dtb}"}
+                     "${_available_ucodes[@]}")
+ 
+     # Files specific to x86_64: IA32 UEFI binaries for mixed mode booting, memtest86+

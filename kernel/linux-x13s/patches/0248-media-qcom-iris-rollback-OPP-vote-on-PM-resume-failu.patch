@@ -1,0 +1,39 @@
+From fb2947d68e5f6e89dc19ada3ef3a0bbf20c39f13 Mon Sep 17 00:00:00 2001
+From: Hungyu Lin <dennylin0707@gmail.com>
+Date: Thu, 4 Jun 2026 09:00:59 +0000
+Subject: [PATCH 248/263] media: qcom: iris: rollback OPP vote on PM resume
+ failure
+
+Rollback the maximum OPP vote when
+pm_runtime_resume_and_get() fails in
+iris_enable_power_domains().
+
+This ensures the performance state vote is released when
+power domain enablement does not complete successfully.
+
+Fixes: bb8a95aa038e ("media: iris: implement power management")
+Signed-off-by: Hungyu Lin <dennylin0707@gmail.com>
+Link: https://lore.kernel.org/r/20260604090059.46355-3-dennylin0707@gmail.com
+---
+ drivers/media/platform/qcom/iris/iris_resources.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_resources.c b/drivers/media/platform/qcom/iris/iris_resources.c
+index eb1e8f8d2..8ed8ded29 100644
+--- a/drivers/media/platform/qcom/iris/iris_resources.c
++++ b/drivers/media/platform/qcom/iris/iris_resources.c
+@@ -79,8 +79,10 @@ int iris_enable_power_domains(struct iris_core *core, struct device *pd_dev)
+ 		return ret;
+ 
+ 	ret = pm_runtime_resume_and_get(pd_dev);
+-	if (ret)
++	if (ret) {
++		iris_opp_set_rate(core->dev, 0);
+ 		return ret;
++	}
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

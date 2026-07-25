@@ -1,0 +1,56 @@
+From d74506627d81c113ae19726c91d04634490df5e9 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sre@kernel.org>
+Date: Tue, 17 Feb 2026 03:03:14 +0100
+Subject: [PATCH 110/263] arm64: dts: qcom: x1e80100-t14s: Add accelerometer
+
+My T14s Gen6 Snapdragon contains a LIS2DW based accelerometer. Let's
+describe it in the device tree, so that the operating system can make
+use of it. The mounting matrix follows the IIO binding description,
+but uses the keyboard as reference instead of the screen as the sensor
+is mounted on the mainboard of the laptop.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ .../qcom/x1e78100-lenovo-thinkpad-t14s.dtsi   | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index 0afec17b9..02c474bfa 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -76,6 +76,19 @@ i2c {
+ 		pinctrl-names = "default";
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
++
++		accelerometer@18 {
++			compatible = "st,lis2dw12";
++			reg = <0x18>;
++			interrupts-extended = <&tlmm 28 IRQ_TYPE_LEVEL_LOW>;
++			mount-matrix = "1", "0", "0",
++				       "0", "-1", "0",
++				       "0", "0", "-1";
++			pinctrl-0 = <&imu_int_n_default>;
++			pinctrl-names = "default";
++			vdd-supply = <&vreg_l10b_1p8>;
++			vddio-supply = <&vreg_l10b_1p8>;
++		};
+ 	};
+ 
+ 	leds {
+@@ -1780,6 +1793,12 @@ hall_int_n_default: hall-int-n-state {
+ 		bias-disable;
+ 	};
+ 
++	imu_int_n_default: imu-int-n-state {
++		pins = "gpio28";
++		function = "gpio";
++		bias-disable;
++	};
++
+ 	i2c_imu_default: i2c-imu-default {
+ 		pins = "gpio215", "gpio216";
+ 		function = "gpio";
+-- 
+2.43.0
+

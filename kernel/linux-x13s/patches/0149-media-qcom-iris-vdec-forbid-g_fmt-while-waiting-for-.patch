@@ -1,0 +1,76 @@
+From 20b50c1c4d15b91b63412edf0522d578bc971925 Mon Sep 17 00:00:00 2001
+From: Neil Armstrong <neil.armstrong@linaro.org>
+Date: Wed, 8 Apr 2026 18:43:58 +0200
+Subject: [PATCH 149/263] media: qcom: iris: vdec: forbid g_fmt while waiting
+ for first source change
+
+When decoding is started with only the OUTPUT queue, we're waiting
+for a source change event from the decoder. During this period,
+the CAPTURE pixel format is not yet known so return -EINVAL.
+
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Link: https://lore.kernel.org/r/20260408-topic-sm8x50-iris-10bit-decoding-v1-5-428c1ec2e3f3@linaro.org
+---
+ drivers/media/platform/qcom/iris/iris_state.c |  6 ++++++
+ drivers/media/platform/qcom/iris/iris_state.h |  1 +
+ drivers/media/platform/qcom/iris/iris_vidc.c  | 14 +++++++++++---
+ 3 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_state.c b/drivers/media/platform/qcom/iris/iris_state.c
+index d14472414..08e51eecf 100644
+--- a/drivers/media/platform/qcom/iris/iris_state.c
++++ b/drivers/media/platform/qcom/iris/iris_state.c
+@@ -258,6 +258,12 @@ bool iris_drain_pending(struct iris_inst *inst)
+ 		inst->sub_state & IRIS_INST_SUB_DRAIN_LAST;
+ }
+ 
++bool iris_ipsc_pending(struct iris_inst *inst)
++{
++	return inst->state == IRIS_INST_INPUT_STREAMING &&
++		(inst->sub_state & IRIS_INST_SUB_FIRST_IPSC) == 0;
++}
++
+ bool iris_allow_cmd(struct iris_inst *inst, u32 cmd)
+ {
+ 	struct vb2_queue *src_q = v4l2_m2m_get_src_vq(inst->m2m_ctx);
+diff --git a/drivers/media/platform/qcom/iris/iris_state.h b/drivers/media/platform/qcom/iris/iris_state.h
+index b09fa54cf..761e6c4dc 100644
+--- a/drivers/media/platform/qcom/iris/iris_state.h
++++ b/drivers/media/platform/qcom/iris/iris_state.h
+@@ -142,5 +142,6 @@ int iris_inst_sub_state_change_pause(struct iris_inst *inst, u32 plane);
+ bool iris_allow_cmd(struct iris_inst *inst, u32 cmd);
+ bool iris_drc_pending(struct iris_inst *inst);
+ bool iris_drain_pending(struct iris_inst *inst);
++bool iris_ipsc_pending(struct iris_inst *inst);
+ 
+ #endif
+diff --git a/drivers/media/platform/qcom/iris/iris_vidc.c b/drivers/media/platform/qcom/iris/iris_vidc.c
+index 5eb1786b0..f942ea09a 100644
+--- a/drivers/media/platform/qcom/iris/iris_vidc.c
++++ b/drivers/media/platform/qcom/iris/iris_vidc.c
+@@ -359,11 +359,19 @@ static int iris_g_fmt_vid_mplane(struct file *filp, void *fh, struct v4l2_format
+ 	int ret = 0;
+ 
+ 	mutex_lock(&inst->lock);
++
+ 	if (V4L2_TYPE_IS_OUTPUT(f->type))
+ 		*f = *inst->fmt_src;
+-	else if (V4L2_TYPE_IS_CAPTURE(f->type))
+-		*f = *inst->fmt_dst;
+-	else
++	else if (V4L2_TYPE_IS_CAPTURE(f->type)) {
++		/*
++		 * Do not return any format when waiting for the firmware
++		 * to send an initial source change
++		 */
++		if (iris_ipsc_pending(inst))
++			ret = -EINVAL;
++		else
++			*f = *inst->fmt_dst;
++	} else
+ 		ret = -EINVAL;
+ 
+ 	mutex_unlock(&inst->lock);
+-- 
+2.43.0
+

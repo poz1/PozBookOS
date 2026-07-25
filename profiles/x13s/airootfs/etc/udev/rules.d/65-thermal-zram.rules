@@ -1,0 +1,11 @@
+# The GPU thermal zone's only cooling device is devfreq-based and has no power
+# model, so power_allocator (the compiled-in default governor) never calls
+# set_cur_state on it and the 85 C passive trip does nothing. step_wise is
+# already built in and is the correct governor for a device without a power
+# model.
+ACTION=="add", SUBSYSTEM=="thermal", ATTR{type}=="gpu-thermal", ATTR{policy}="step_wise"
+
+# ZRAM secondary compression. zram-generator has no syntax for the multi-comp
+# tier, so the secondary algorithm has to be written to sysfs once the device
+# exists. Pages are only recompressed on explicit request.
+ACTION=="add", KERNEL=="zram0", ATTR{recomp_algorithm}="algo=zstd priority=1"

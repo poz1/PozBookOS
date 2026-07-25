@@ -1,0 +1,112 @@
+From ff9551a598b5f46f8e001c8c764af688b7810684 Mon Sep 17 00:00:00 2001
+From: Xilin Wu <sophon@radxa.com>
+Date: Thu, 7 May 2026 22:34:35 +0800
+Subject: [PATCH 212/263] arm64: dts: qcom: sc8280xp: drop unused
+ polling-delay-passive properties
+
+Remove the unused polling-delay-passive properties from thermal nodes
+without a passive trip point.
+
+Signed-off-by: Xilin Wu <sophon@radxa.com>
+Link: https://lore.kernel.org/r/20260507-sc8280xp-thermal-zones-v1-1-33d4395b1be9@radxa.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 20 --------------------
+ 1 file changed, 20 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 9ea653295..db4827082 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -6582,8 +6582,6 @@ sound: sound {
+ 
+ 	thermal-zones {
+ 		cpu0-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 1>;
+ 
+ 			trips {
+@@ -6596,8 +6594,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu1-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 2>;
+ 
+ 			trips {
+@@ -6610,8 +6606,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu2-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 3>;
+ 
+ 			trips {
+@@ -6624,8 +6618,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu3-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 4>;
+ 
+ 			trips {
+@@ -6638,8 +6630,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu4-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 5>;
+ 
+ 			trips {
+@@ -6652,8 +6642,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu5-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 6>;
+ 
+ 			trips {
+@@ -6666,8 +6654,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu6-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 7>;
+ 
+ 			trips {
+@@ -6680,8 +6666,6 @@ cpu-crit {
+ 		};
+ 
+ 		cpu7-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 8>;
+ 
+ 			trips {
+@@ -6694,8 +6678,6 @@ cpu-crit {
+ 		};
+ 
+ 		cluster0-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens0 9>;
+ 
+ 			trips {
+@@ -6735,8 +6717,6 @@ trip-point1 {
+ 		};
+ 
+ 		mem-thermal {
+-			polling-delay-passive = <250>;
+-
+ 			thermal-sensors = <&tsens1 15>;
+ 
+ 			trips {
+-- 
+2.43.0
+

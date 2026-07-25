@@ -1,0 +1,49 @@
+From 7a27bfb6228df469c48a12601228bc58b68c5c0f Mon Sep 17 00:00:00 2001
+From: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Date: Fri, 15 May 2026 13:56:35 +0300
+Subject: [PATCH 048/263] media: dt-bindings: Document SC8280XP/SM8350 Iris
+
+The Iris block on SM8350 and SC8280XP is compatible with the Iris
+(Venus) on SM8250. Describing in the bindings that the block is Iris v2
+and not Venus. Document SM8350 and SC8280XP IP cores, using
+qcom,sm8250-venus as a fallback compatible.
+
+Signed-off-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260515-iris-sc8280xp-v7-1-2e21f6db1897@oss.qualcomm.com
+---
+ .../devicetree/bindings/media/qcom,sm8250-venus.yaml | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/media/qcom,sm8250-venus.yaml b/Documentation/devicetree/bindings/media/qcom,sm8250-venus.yaml
+index 04cbacc25..ce0d3cfe9 100644
+--- a/Documentation/devicetree/bindings/media/qcom,sm8250-venus.yaml
++++ b/Documentation/devicetree/bindings/media/qcom,sm8250-venus.yaml
+@@ -10,15 +10,21 @@ maintainers:
+   - Stanimir Varbanov <stanimir.varbanov@linaro.org>
+ 
+ description: |
+-  The Venus IP is a video encode and decode accelerator present
+-  on Qualcomm platforms
++  The Iris v2.xx IP is a video encode and decode accelerator present on
++  Qualcomm platforms
+ 
+ allOf:
+   - $ref: qcom,venus-common.yaml#
+ 
+ properties:
+   compatible:
+-    const: qcom,sm8250-venus
++    oneOf:
++      - const: qcom,sm8250-venus
++      - items:
++          - enum:
++              - qcom,sc8280xp-iris
++              - qcom,sm8350-iris
++          - const: qcom,sm8250-venus
+ 
+   power-domains:
+     maxItems: 4
+-- 
+2.43.0
+

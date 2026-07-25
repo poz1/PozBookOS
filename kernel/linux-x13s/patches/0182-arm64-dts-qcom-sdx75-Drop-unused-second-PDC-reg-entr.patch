@@ -1,0 +1,33 @@
+From f52b6eebe64c5c22814d12ee047243a12a666b57 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:11 +0530
+Subject: [PATCH 182/263] arm64: dts: qcom: sdx75: Drop unused second PDC reg
+ entry
+
+The PDC driver only maps the first register region (APSS DRV) via
+of_address_to_resource(node, 0, ...). The second reg entry was never
+accessed by the driver and can be removed.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-35-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sdx75.dtsi | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sdx75.dtsi b/arch/arm64/boot/dts/qcom/sdx75.dtsi
+index 82a8107f2..e740e123c 100644
+--- a/arch/arm64/boot/dts/qcom/sdx75.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdx75.dtsi
+@@ -1100,8 +1100,7 @@ usb_1_dwc3_ss: endpoint {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sdx75-pdc", "qcom,pdc";
+-			reg = <0x0 0xb220000 0x0 0x10000>,
+-			      <0x0 0x174000f0 0x0 0x64>;
++			reg = <0x0 0xb220000 0x0 0x10000>;
+ 			qcom,pdc-ranges = <0 147 52>,
+ 					  <52 266 32>,
+ 					  <84 500 59>;
+-- 
+2.43.0
+

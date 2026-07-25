@@ -1,0 +1,40 @@
+From 9fdae21254695dbcb07991b992e2c5350f657d72 Mon Sep 17 00:00:00 2001
+From: Daniel J Blueman <daniel@quora.org>
+Date: Mon, 1 Jun 2026 12:13:33 +0800
+Subject: [PATCH 231/263] dt-bindings: media: qcom,sm8550-iris: Allow IOVA
+ reservation memory-region
+
+In addition to the firmware-loaded codec carveout, some Iris platforms
+need to declare an IOMMU IOVA reservation (a reserved-memory node with
+iommu-addresses) to keep DMA away from IOVA ranges that earlier
+firmware stages have already mapped through the SMMU.
+
+Permit a second memory-region phandle for this purpose, and describe
+the meaning of each entry so the ordering is unambiguous.
+
+Signed-off-by: Daniel J Blueman <daniel@quora.org>
+Link: https://lore.kernel.org/r/20260601041336.9497-1-daniel@quora.org
+---
+ .../devicetree/bindings/media/qcom,sm8550-iris.yaml         | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/media/qcom,sm8550-iris.yaml b/Documentation/devicetree/bindings/media/qcom,sm8550-iris.yaml
+index 9c4b76050..0d83bb86c 100644
+--- a/Documentation/devicetree/bindings/media/qcom,sm8550-iris.yaml
++++ b/Documentation/devicetree/bindings/media/qcom,sm8550-iris.yaml
+@@ -80,7 +80,11 @@ properties:
+   dma-coherent: true
+ 
+   memory-region:
+-    maxItems: 1
++    minItems: 1
++    maxItems: 2
++    items:
++      - description: Firmware-loaded codec carveout
++      - description: IOMMU IOVA reservation region
+ 
+   operating-points-v2: true
+ 
+-- 
+2.43.0
+

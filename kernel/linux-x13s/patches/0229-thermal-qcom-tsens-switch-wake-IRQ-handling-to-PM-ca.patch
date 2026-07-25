@@ -1,0 +1,215 @@
+From bb25024c1494fd7828d9624983c2bf22b4b7b732 Mon Sep 17 00:00:00 2001
+From: Priyansh Jain <priyansh.jain@oss.qualcomm.com>
+Date: Mon, 1 Jun 2026 12:07:56 +0530
+Subject: [PATCH 229/263] thermal: qcom: tsens: switch wake IRQ handling to PM
+ callbacks
+
+This change improves power management by using the standardized PM
+framework for wake IRQ handling.
+
+Move wake IRQ control to the PM suspend/resume path:
+- store uplow/critical IRQ numbers in struct tsens_priv
+- enable wake IRQs in tsens_suspend_common() when wakeup is allowed
+- disable wake IRQs in tsens_resume_common()
+- mark the device wakeup-capable during probe
+
+This aligns TSENS wake behavior with suspend flow and avoids keeping
+wake IRQs permanently enabled during runtime.
+
+Signed-off-by: Priyansh Jain <priyansh.jain@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260601-tsens_interrupt_wake_control-v2-1-ce9570946abd@oss.qualcomm.com
+---
+ drivers/thermal/qcom/tsens-v2.c |  1 -
+ drivers/thermal/qcom/tsens.c    | 64 ++++++++++++++++++++++++++-------
+ drivers/thermal/qcom/tsens.h    | 18 +++++++++-
+ 3 files changed, 69 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/thermal/qcom/tsens-v2.c b/drivers/thermal/qcom/tsens-v2.c
+index 8d9698ea3..e06f8e580 100644
+--- a/drivers/thermal/qcom/tsens-v2.c
++++ b/drivers/thermal/qcom/tsens-v2.c
+@@ -263,7 +263,6 @@ static int __init init_tsens_v2_no_rpm(struct tsens_priv *priv)
+ static const struct tsens_ops ops_generic_v2 = {
+ 	.init		= init_common,
+ 	.get_temp	= get_temp_tsens_valid,
+-	.resume		= tsens_resume_common,
+ };
+ 
+ struct tsens_plat_data data_tsens_v2 = {
+diff --git a/drivers/thermal/qcom/tsens.c b/drivers/thermal/qcom/tsens.c
+index a2422ebee..5210985b3 100644
+--- a/drivers/thermal/qcom/tsens.c
++++ b/drivers/thermal/qcom/tsens.c
+@@ -1086,22 +1086,30 @@ static int tsens_get_temp(struct thermal_zone_device *tz, int *temp)
+ 
+ static int  __maybe_unused tsens_suspend(struct device *dev)
+ {
++	int ret = 0;
+ 	struct tsens_priv *priv = dev_get_drvdata(dev);
+ 
+-	if (priv->ops && priv->ops->suspend)
+-		return priv->ops->suspend(priv);
++	if (priv->ops && priv->ops->suspend) {
++		ret = priv->ops->suspend(priv);
++		if (ret)
++			return ret;
++	}
+ 
+-	return 0;
++	return tsens_suspend_common(priv);
+ }
+ 
+ static int __maybe_unused tsens_resume(struct device *dev)
+ {
++	int ret = 0;
+ 	struct tsens_priv *priv = dev_get_drvdata(dev);
+ 
+-	if (priv->ops && priv->ops->resume)
+-		return priv->ops->resume(priv);
++	if (priv->ops && priv->ops->resume) {
++		ret = priv->ops->resume(priv);
++		if (ret)
++			return ret;
++	}
+ 
+-	return 0;
++	return tsens_resume_common(priv);
+ }
+ 
+ static SIMPLE_DEV_PM_OPS(tsens_pm_ops, tsens_suspend, tsens_resume);
+@@ -1172,7 +1180,7 @@ static const struct thermal_zone_device_ops tsens_of_ops = {
+ };
+ 
+ static int tsens_register_irq(struct tsens_priv *priv, char *irqname,
+-			      irq_handler_t thread_fn)
++			      irq_handler_t thread_fn, int *irq_num)
+ {
+ 	struct platform_device *pdev;
+ 	int ret, irq;
+@@ -1205,7 +1213,7 @@ static int tsens_register_irq(struct tsens_priv *priv, char *irqname,
+ 			dev_err(&pdev->dev, "%s: failed to get irq\n",
+ 				__func__);
+ 		else
+-			enable_irq_wake(irq);
++			*irq_num = irq;
+ 	}
+ 
+ 	put_device(&pdev->dev);
+@@ -1232,11 +1240,38 @@ static int tsens_reinit(struct tsens_priv *priv)
+ 	return 0;
+ }
+ 
++int tsens_suspend_common(struct tsens_priv *priv)
++{
++	if (!device_may_wakeup(priv->dev))
++		return 0;
++
++	if (priv->feat->combo_int)
++		enable_irq_wake(priv->combined_irq);
++	else {
++		enable_irq_wake(priv->uplow_irq);
++		if (priv->feat->crit_int)
++			enable_irq_wake(priv->crit_irq);
++	}
++
++	return 0;
++}
++
+ int tsens_resume_common(struct tsens_priv *priv)
+ {
+ 	if (pm_suspend_target_state == PM_SUSPEND_MEM)
+ 		tsens_reinit(priv);
+ 
++	if (!device_may_wakeup(priv->dev))
++		return 0;
++
++	if (priv->feat->combo_int)
++		disable_irq_wake(priv->combined_irq);
++	else {
++		disable_irq_wake(priv->uplow_irq);
++		if (priv->feat->crit_int)
++			disable_irq_wake(priv->crit_irq);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -1276,15 +1311,18 @@ static int tsens_register(struct tsens_priv *priv)
+ 
+ 	if (priv->feat->combo_int) {
+ 		ret = tsens_register_irq(priv, "combined",
+-					 tsens_combined_irq_thread);
++					 tsens_combined_irq_thread,  &priv->combined_irq);
+ 	} else {
+-		ret = tsens_register_irq(priv, "uplow", tsens_irq_thread);
++		ret = tsens_register_irq(priv, "uplow", tsens_irq_thread,
++					 &priv->uplow_irq);
+ 		if (ret < 0)
+ 			return ret;
+ 
+-		if (priv->feat->crit_int)
++		if (priv->feat->crit_int) {
+ 			ret = tsens_register_irq(priv, "critical",
+-						 tsens_critical_irq_thread);
++						 tsens_critical_irq_thread,
++						 &priv->crit_irq);
++		}
+ 	}
+ 
+ 	return ret;
+@@ -1343,6 +1381,8 @@ static int tsens_probe(struct platform_device *pdev)
+ 
+ 	platform_set_drvdata(pdev, priv);
+ 
++	device_init_wakeup(dev, true);
++
+ 	if (!priv->ops || !priv->ops->init || !priv->ops->get_temp)
+ 		return -EINVAL;
+ 
+diff --git a/drivers/thermal/qcom/tsens.h b/drivers/thermal/qcom/tsens.h
+index 2a7afa4c8..5e2da4e0d 100644
+--- a/drivers/thermal/qcom/tsens.h
++++ b/drivers/thermal/qcom/tsens.h
+@@ -567,6 +567,9 @@ struct tsens_context {
+  * @ops: pointer to list of callbacks supported by this device
+  * @debug_root: pointer to debugfs dentry for all tsens
+  * @debug: pointer to debugfs dentry for tsens controller
++ * @uplow_irq: IRQ number for uplow (upper/lower) threshold interrupts
++ * @crit_irq: IRQ number for critical threshold interrupts
++ * @combined_irq: IRQ number for combined threshold interrupts
+  * @sensor: list of sensors attached to this device
+  */
+ struct tsens_priv {
+@@ -588,6 +591,10 @@ struct tsens_priv {
+ 	struct dentry			*debug_root;
+ 	struct dentry			*debug;
+ 
++	int				uplow_irq;
++	int				crit_irq;
++	int				combined_irq;
++
+ 	struct tsens_sensor		sensor[] __counted_by(num_sensors);
+ };
+ 
+@@ -639,8 +646,17 @@ int get_temp_tsens_valid(const struct tsens_sensor *s, int *temp);
+ int get_temp_common(const struct tsens_sensor *s, int *temp);
+ #ifdef CONFIG_SUSPEND
+ int tsens_resume_common(struct tsens_priv *priv);
++int tsens_suspend_common(struct tsens_priv *priv);
+ #else
+-#define tsens_resume_common            NULL
++static inline int tsens_resume_common(struct tsens_priv *priv)
++{
++	return 0;
++}
++
++static inline int tsens_suspend_common(struct tsens_priv *priv)
++{
++	return 0;
++}
+ #endif
+ 
+ /* TSENS target */
+-- 
+2.43.0
+

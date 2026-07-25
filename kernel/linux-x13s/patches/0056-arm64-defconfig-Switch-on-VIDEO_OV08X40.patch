@@ -1,0 +1,27 @@
+From dae6e41fb2c93cd45ddc5c827c8ace7b3174af67 Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Fri, 23 Feb 2024 10:12:16 +0000
+Subject: [PATCH 056/263] arm64: defconfig: Switch on VIDEO_OV08X40
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index dd5f94b65..d4171a0f0 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -941,6 +941,7 @@ CONFIG_VIDEO_TI_J721E_CSI2RX=m
+ CONFIG_VIDEO_HANTRO=m
+ CONFIG_VIDEO_IMX219=m
+ CONFIG_VIDEO_IMX412=m
++CONFIG_VIDEO_OV08X40=m
+ CONFIG_VIDEO_OV5640=m
+ CONFIG_VIDEO_OV5645=m
+ CONFIG_DRM=m
+-- 
+2.43.0
+

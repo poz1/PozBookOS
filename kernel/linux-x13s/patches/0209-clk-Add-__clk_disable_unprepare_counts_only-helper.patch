@@ -1,0 +1,207 @@
+From 4d578797a442327f80c2454644f4c2f89abc677c Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Mon, 27 Apr 2026 15:50:02 +0200
+Subject: [PATCH 209/263] clk: Add __clk_disable_unprepare_counts_only() helper
+
+The device-tree simple-framebuffer device is special in that it does not
+describe actual hardware, but it allows firmware (e.g. u-boot) to pass a
+firmware initialized framebuffer to the OS to use as display during boot.
+
+To avoid clocks used by the firmware framebuffer getting touched while in
+use, the DT node contains a list of clocks and the simpledrm driver calls
+clk_prepare_enable() on these clocks. When the real display driver loads
+simpledrm gets unbound and calls clk_disable_unprepare().
+
+The simple-framebuffer concept assumes that the order in which resources
+are acquired does not matter since they are already on, so power-sequencing
+is not an issue. But clk_disable_unprepare() actually turns the clock off,
+messing with the hardware state before the real display driver loads,
+without any knowledge of the proper power-off sequence for the display.
+
+Sometimes this leaves the hardware in an undefined state e.g. on some
+Qualcomm platforms turning off the DP clocks at simpledrm remove() results
+in the following error when the msm display driver tries to re-enable them:
+
+[    2.980181] disp_cc_mdss_dptx3_pixel0_clk_src: rcg didn't update its configuration.
+[    2.980272] WARNING: drivers/clk/qcom/clk-rcg2.c:136 at update_config+0xdc/0x100
+
+Clocks from the simple-framebuffer DT node are not so much clocks which
+the simpledrm driver should take full control of, but rather are clocks
+which should not be touched as long as the firmware framebuffer is in use.
+This includes not turning them off before handing over control to the real
+display driver.
+
+Add a new __clk_disable_unprepare_counts_only() helper which decrements the
+enable, prepare and protect counts of the clock and its parents, so that
+the real display can take control over the clocks, but which does not
+actually disable any clocks.
+
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ drivers/clk/clk.c   | 41 +++++++++++++++++++++++++++++------------
+ include/linux/clk.h | 14 ++++++++++++++
+ 2 files changed, 43 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/clk/clk.c b/drivers/clk/clk.c
+index 47093cda9..8c92d3551 100644
+--- a/drivers/clk/clk.c
++++ b/drivers/clk/clk.c
+@@ -1037,7 +1037,7 @@ int devm_clk_rate_exclusive_get(struct device *dev, struct clk *clk)
+ }
+ EXPORT_SYMBOL_GPL(devm_clk_rate_exclusive_get);
+ 
+-static void clk_core_unprepare(struct clk_core *core)
++static void clk_core_unprepare(struct clk_core *core, bool call_unprepare_op)
+ {
+ 	lockdep_assert_held(&prepare_lock);
+ 
+@@ -1062,18 +1062,18 @@ static void clk_core_unprepare(struct clk_core *core)
+ 
+ 	trace_clk_unprepare(core);
+ 
+-	if (core->ops->unprepare)
++	if (call_unprepare_op && core->ops->unprepare)
+ 		core->ops->unprepare(core->hw);
+ 
+ 	trace_clk_unprepare_complete(core);
+-	clk_core_unprepare(core->parent);
++	clk_core_unprepare(core->parent, call_unprepare_op);
+ 	clk_pm_runtime_put(core);
+ }
+ 
+ static void clk_core_unprepare_lock(struct clk_core *core)
+ {
+ 	clk_prepare_lock();
+-	clk_core_unprepare(core);
++	clk_core_unprepare(core, true);
+ 	clk_prepare_unlock();
+ }
+ 
+@@ -1140,7 +1140,7 @@ static int clk_core_prepare(struct clk_core *core)
+ 
+ 	return 0;
+ unprepare:
+-	clk_core_unprepare(core->parent);
++	clk_core_unprepare(core->parent, true);
+ runtime_put:
+ 	clk_pm_runtime_put(core);
+ 	return ret;
+@@ -1178,7 +1178,7 @@ int clk_prepare(struct clk *clk)
+ }
+ EXPORT_SYMBOL_GPL(clk_prepare);
+ 
+-static void clk_core_disable(struct clk_core *core)
++static void clk_core_disable(struct clk_core *core, bool call_disable_op)
+ {
+ 	lockdep_assert_held(&enable_lock);
+ 
+@@ -1197,12 +1197,12 @@ static void clk_core_disable(struct clk_core *core)
+ 
+ 	trace_clk_disable(core);
+ 
+-	if (core->ops->disable)
++	if (call_disable_op && core->ops->disable)
+ 		core->ops->disable(core->hw);
+ 
+ 	trace_clk_disable_complete(core);
+ 
+-	clk_core_disable(core->parent);
++	clk_core_disable(core->parent, call_disable_op);
+ }
+ 
+ static void clk_core_disable_lock(struct clk_core *core)
+@@ -1210,7 +1210,7 @@ static void clk_core_disable_lock(struct clk_core *core)
+ 	unsigned long flags;
+ 
+ 	flags = clk_enable_lock();
+-	clk_core_disable(core);
++	clk_core_disable(core, true);
+ 	clk_enable_unlock(flags);
+ }
+ 
+@@ -1235,6 +1235,23 @@ void clk_disable(struct clk *clk)
+ }
+ EXPORT_SYMBOL_GPL(clk_disable);
+ 
++void __clk_disable_unprepare_counts_only(struct clk *clk)
++{
++	unsigned long flags;
++
++	if (IS_ERR_OR_NULL(clk))
++		return;
++
++	flags = clk_enable_lock();
++	clk_core_disable(clk->core, false);
++	clk_enable_unlock(flags);
++
++	clk_prepare_lock();
++	clk_core_unprepare(clk->core, false);
++	clk_prepare_unlock();
++}
++EXPORT_SYMBOL_GPL(__clk_disable_unprepare_counts_only);
++
+ static int clk_core_enable(struct clk_core *core)
+ {
+ 	int ret = 0;
+@@ -1262,7 +1279,7 @@ static int clk_core_enable(struct clk_core *core)
+ 		trace_clk_enable_complete(core);
+ 
+ 		if (ret) {
+-			clk_core_disable(core->parent);
++			clk_core_disable(core->parent, true);
+ 			return ret;
+ 		}
+ 	}
+@@ -2451,7 +2468,7 @@ static void clk_change_rate(struct clk_core *core)
+ 
+ 	if (core->flags & CLK_SET_RATE_UNGATE) {
+ 		clk_core_disable_lock(core);
+-		clk_core_unprepare(core);
++		clk_core_unprepare(core, true);
+ 	}
+ 
+ 	if (core->flags & CLK_OPS_PARENT_ENABLE)
+@@ -4063,7 +4080,7 @@ static int __clk_core_init(struct clk_core *core)
+ 		if (ret) {
+ 			pr_warn("%s: critical clk '%s' failed to enable\n",
+ 			       __func__, core->name);
+-			clk_core_unprepare(core);
++			clk_core_unprepare(core, true);
+ 			goto out;
+ 		}
+ 	}
+diff --git a/include/linux/clk.h b/include/linux/clk.h
+index 998ba3f26..7dee0dbb9 100644
+--- a/include/linux/clk.h
++++ b/include/linux/clk.h
+@@ -783,6 +783,19 @@ void clk_disable(struct clk *clk);
+  */
+ void clk_bulk_disable(int num_clks, const struct clk_bulk_data *clks);
+ 
++/**
++ * __clk_disable_unprepare_counts_only - Decrement enable and prepare counts
++ *
++ * Like clk_disable_unprepare() but then only decrement the enable, prepare and
++ * protect counts of the clock and its parents without actually disabling any
++ * clocks.
++ *
++ * This function should only be used in special case where the clocks should
++ * stay on while handing control over from an early-boot driver like simpledrm
++ * to a later more featureful driver. When in doubt do NOT use this function.
++ */
++void __clk_disable_unprepare_counts_only(struct clk *clk);
++
+ /**
+  * clk_get_rate - obtain the current clock rate (in Hz) for a clock source.
+  *		  This is only valid once the clock source has been enabled.
+@@ -1099,6 +1112,7 @@ static inline int __must_check clk_bulk_enable(int num_clks,
+ 
+ static inline void clk_disable(struct clk *clk) {}
+ 
++static inline void __clk_disable_unprepare_counts_only(struct clk *clk) {}
+ 
+ static inline void clk_bulk_disable(int num_clks,
+ 				    const struct clk_bulk_data *clks) {}
+-- 
+2.43.0
+

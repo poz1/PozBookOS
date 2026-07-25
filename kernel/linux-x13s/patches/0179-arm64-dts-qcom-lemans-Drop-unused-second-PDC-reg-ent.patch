@@ -1,0 +1,33 @@
+From f24fe186613396dc0c8c3730bbbed1a5218bad7c Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:07 +0530
+Subject: [PATCH 179/263] arm64: dts: qcom: lemans: Drop unused second PDC reg
+ entry
+
+The PDC driver only maps the first register region (APSS DRV) via
+of_address_to_resource(node, 0, ...). The second reg entry was never
+accessed by the driver and can be removed.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-31-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/lemans.dtsi | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/lemans.dtsi b/arch/arm64/boot/dts/qcom/lemans.dtsi
+index 609ad70f2..b2ac6d6a3 100644
+--- a/arch/arm64/boot/dts/qcom/lemans.dtsi
++++ b/arch/arm64/boot/dts/qcom/lemans.dtsi
+@@ -5536,8 +5536,7 @@ dispcc0: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sa8775p-pdc", "qcom,pdc";
+-			reg = <0x0 0x0b220000 0x0 0x10000>,
+-			      <0x0 0x17c000f0 0x0 0x64>;
++			reg = <0x0 0x0b220000 0x0 0x10000>;
+ 			qcom,pdc-ranges = <0 480 40>,
+ 					  <40 140 14>,
+ 					  <54 263 1>,
+-- 
+2.43.0
+

@@ -1,0 +1,84 @@
+From 7b3455a4256fe703f1b475c707724edc7a4d9c92 Mon Sep 17 00:00:00 2001
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Date: Mon, 19 Jan 2026 12:42:32 +0100
+Subject: [PATCH 126/263] arm64: dts: qcom: lemans-ride-common: Fix up WCN
+ power grid
+
+Make the dt checker happy by filling out the required properties in
+line with the schematics.
+
+Reviewed-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+Reviewed-by: Bartosz Golaszewski <bartosz.golaszewski@oss.qualcomm.com>
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260119-topic-wcn6855_pmu_dtbdings-v2-10-6d1c75608bbb@oss.qualcomm.com
+---
+ .../boot/dts/qcom/lemans-ride-common.dtsi     | 32 +++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/lemans-ride-common.dtsi b/arch/arm64/boot/dts/qcom/lemans-ride-common.dtsi
+index 8fb7d1fc6..7ae5f8447 100644
+--- a/arch/arm64/boot/dts/qcom/lemans-ride-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/lemans-ride-common.dtsi
+@@ -79,6 +79,18 @@ vreg_3p0: vreg-3p0-regulator {
+ 		vin-supply = <&vreg_12p0>;
+ 	};
+ 
++	vreg_3p3: vreg-3p3-regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "VREG_3P3";
++
++		regulator-always-on;
++		regulator-boot-on;
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++
++		vin-supply = <&vreg_12p0>;
++	};
++
+ 	vreg_conn_1p8: vreg_conn_1p8 {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vreg_conn_1p8";
+@@ -95,6 +107,22 @@ vreg_conn_pa: vreg_conn_pa {
+ 		gpio = <&pmm8654au_1_gpios 6 GPIO_ACTIVE_HIGH>;
+ 	};
+ 
++	/*
++	 * TODO: These two regulators are actually part of the removable M.2
++	 * card and not the mainboard. Need to describe this differently.
++	 * Functionally it works correctly, because all we need to do is to
++	 * turn on the actual 3.3V supply above.
++	 */
++	vreg_wcn_0p95: vreg-wcn-0p95-regulator {
++		compatible = "regulator-fixed";
++
++		regulator-name = "VREG_WCN_0P95";
++		regulator-min-microvolt = <950000>;
++		regulator-max-microvolt = <950000>;
++
++		vin-supply = <&vreg_3p3>;
++	};
++
+ 	wcn6855-pmu {
+ 		compatible = "qcom,wcn6855-pmu";
+ 
+@@ -104,6 +132,8 @@ wcn6855-pmu {
+ 		vddio-supply = <&vreg_conn_pa>;
+ 		vddaon-supply = <&vreg_l2c>;
+ 		vddpmu-supply = <&vreg_conn_1p8>;
++		vddpmumx-supply = <&vreg_wcn_0p95>;
++		vddpmucx-supply = <&vreg_wcn_0p95>;
+ 		vddrfa0p95-supply = <&vreg_l2c>;
+ 		vddrfa1p3-supply = <&vreg_l6e>;
+ 		vddrfa1p9-supply = <&vreg_s5a>;
+@@ -982,6 +1012,8 @@ bluetooth {
+ 		vddrfa0p8-supply = <&vreg_pmu_rfa_0p8>;
+ 		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
+ 		vddrfa1p7-supply = <&vreg_pmu_rfa_1p7>;
++		vddwlcx-supply = <&vreg_pmu_wlcx_0p8>;
++		vddwlmx-supply = <&vreg_pmu_wlmx_0p85>;
+ 	};
+ };
+ 
+-- 
+2.43.0
+

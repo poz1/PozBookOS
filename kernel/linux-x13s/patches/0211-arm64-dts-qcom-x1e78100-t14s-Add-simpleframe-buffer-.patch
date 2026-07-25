@@ -1,0 +1,56 @@
+From 3e3f74d8314c83497f55633b8581807534bd2d38 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Wed, 22 Apr 2026 20:06:50 +0200
+Subject: [PATCH 211/263] arm64: dts: qcom: x1e78100-t14s: Add
+ simpleframe-buffer node
+
+Add a simple-framebuffer node describing the resources necessary to
+keep the firmware-framebuffer (EFIFB) working.
+
+This useful to e.g. be able to use the simpledrm/efidrm kms driver in
+the initrd and only load the msm GPU/kms driver from the real rootfs;
+or to be able to boot with nomodeset to debug gfx issues.
+
+TODO: ATM this only list regulators allowing booting with nomodeset
+without requiring "regulator_ignore_unused". This should be extended
+to also list any other resources (e.g. clocks, power-domains).
+
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ .../qcom/x1e78100-lenovo-thinkpad-t14s.dts    | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dts b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dts
+index 5cc6a63d1..4ec6b97cd 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dts
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dts
+@@ -10,6 +10,26 @@ / {
+ 	compatible = "lenovo,thinkpad-t14s-lcd", "lenovo,thinkpad-t14s",
+ 		     "qcom,x1e78100", "qcom,x1e80100";
+ 
++	chosen {
++		simplefb: framebuffer {
++			compatible = "simple-framebuffer";
++			status = "disabled";
++
++			panel-supply = <&vreg_edp_3p3>;
++			backlight-supply = <&vreg_edp_bl>;
++			dp3-vdda-phy-supply = <&vreg_l3j_0p8>;
++			dp3-vdda-pll-supply = <&vreg_l2j_1p2>;
++
++			clocks = <&dispcc DISP_CC_MDSS_AHB_CLK>,
++				 <&gcc GCC_DISP_HF_AXI_CLK>,
++				 <&dispcc DISP_CC_MDSS_MDP_CLK>,
++				 <&dispcc DISP_CC_MDSS_DPTX3_AUX_CLK>,
++				 <&dispcc DISP_CC_MDSS_DPTX3_LINK_CLK>,
++				 <&dispcc DISP_CC_MDSS_DPTX3_LINK_INTF_CLK>,
++				 <&dispcc DISP_CC_MDSS_DPTX3_PIXEL0_CLK>;
++		};
++	};
++
+ 	backlight: backlight {
+ 		compatible = "pwm-backlight";
+ 		pwms = <&pmk8550_pwm 0 4266537>;
+-- 
+2.43.0
+

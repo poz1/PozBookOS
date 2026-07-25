@@ -1,0 +1,19 @@
+* {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 12px;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: #1d1f21;
+    color: #c5c8c6;
+}
+
+#workspaces button { padding: 0 8px; color: #808080; background: transparent; }
+#workspaces button.focused { color: #ffffff; background: #285577; }
+
+#clock, #battery, #network, #pulseaudio, #backlight, #tray { padding: 0 10px; }
+
+#battery.warning  { color: #f0c674; }
+#battery.critical { color: #cc6666; }

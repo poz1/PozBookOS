@@ -1,0 +1,47 @@
+From c9eecd5227581e1cc401b3781f42fe205026fa7f Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Sun, 19 Apr 2026 18:16:44 +0200
+Subject: [PATCH 207/263] of/platform: Do not call sysfb_disable() for disabled
+ simple-framebuffer nodes
+
+Make of_platform_default_populate_init() check that the found
+"simple-framebuffer" node is not disabled before calling sysfb_disable().
+
+This avoids the EFI GOP sysfb getting disabled, while the subsequent
+of_platform_device_create() call exits early without creating
+a simple-framebuffer platform-device because of_device_is_available()
+returns false, resulting in there being no firmware framebuffer support
+at all.
+
+Fixes: 3310288f6135 ("of/platform: Disable sysfb if a simple-framebuffer node is found")
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ drivers/of/platform.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/of/platform.c b/drivers/of/platform.c
+index 7eeaf8e27..a66906bc8 100644
+--- a/drivers/of/platform.c
++++ b/drivers/of/platform.c
+@@ -573,7 +573,7 @@ static int __init of_platform_default_populate_init(void)
+ 		}
+ 
+ 		node = of_get_compatible_child(of_chosen, "simple-framebuffer");
+-		if (node) {
++		if (node && of_device_is_available(node)) {
+ 			/*
+ 			 * Since a "simple-framebuffer" device is already added
+ 			 * here, disable the Generic System Framebuffers (sysfb)
+@@ -586,8 +586,8 @@ static int __init of_platform_default_populate_init(void)
+ 			 */
+ 			sysfb_disable(NULL);
+ 			of_platform_device_create(node, NULL, NULL);
+-			of_node_put(node);
+ 		}
++		of_node_put(node);
+ 
+ 		/* Populate everything else. */
+ 		of_platform_default_populate(NULL, NULL, NULL);
+-- 
+2.43.0
+

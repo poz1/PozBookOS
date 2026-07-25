@@ -1,0 +1,32 @@
+From ebefbe4934aeba183841471f443efb24a59e0f0c Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:47 +0530
+Subject: [PATCH 161/263] arm64: dts: qcom: sc7280: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-11-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/kodiak.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/kodiak.dtsi b/arch/arm64/boot/dts/qcom/kodiak.dtsi
+index ba0f7e5c8..c806c9f54 100644
+--- a/arch/arm64/boot/dts/qcom/kodiak.dtsi
++++ b/arch/arm64/boot/dts/qcom/kodiak.dtsi
+@@ -5629,7 +5629,7 @@ opp-810000000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sc7280-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x30000>;
++			reg = <0 0x0b220000 0 0x10000>;
+ 			qcom,pdc-ranges = <0 480 40>, <40 140 14>, <54 263 1>,
+ 					  <55 306 4>, <59 312 3>, <62 374 2>,
+ 					  <64 434 2>, <66 438 3>, <69 86 1>,
+-- 
+2.43.0
+

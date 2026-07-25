@@ -1,0 +1,32 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 26,
+    "modules-left": ["sway/workspaces", "sway/mode"],
+    "modules-center": ["clock"],
+    "modules-right": ["pulseaudio", "network", "backlight", "battery", "tray"],
+
+    "clock": { "format": "{:%a %d %b  %H:%M}" },
+
+    "battery": {
+        "states": { "warning": 30, "critical": 15 },
+        "format": "BAT {capacity}%",
+        "format-charging": "CHG {capacity}%",
+        "format-full": "FULL"
+    },
+
+    "backlight": { "format": "BRI {percent}%" },
+
+    "network": {
+        "format-wifi": "{essid} {signalStrength}%",
+        "format-ethernet": "eth",
+        "format-disconnected": "offline",
+        "tooltip-format": "{ifname}: {ipaddr}"
+    },
+
+    "pulseaudio": {
+        "format": "VOL {volume}%",
+        "format-muted": "VOL mute",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+    }
+}

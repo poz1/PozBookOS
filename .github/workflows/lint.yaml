@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      # The Makefile has had a lint target all along; nothing ever ran it.
+      - run: make lint
+
+  workflows:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate workflow YAML
+        run: |
+          set -euo pipefail
+          python3 -c "
+          import yaml, glob, sys
+          for f in glob.glob('.github/workflows/*.yaml') + glob.glob('.github/workflows/*.yml'):
+              yaml.safe_load(open(f))
+              print('ok', f)
+          "

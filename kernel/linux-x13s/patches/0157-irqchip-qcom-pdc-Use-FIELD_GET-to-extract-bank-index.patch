@@ -1,0 +1,38 @@
+From fffc3e59b5b6a7fab08e6b1eb3f4c506ec02f43f Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:43 +0530
+Subject: [PATCH 157/263] irqchip/qcom-pdc: Use FIELD_GET() to extract bank
+ index and bit position
+
+The IRQ_ENABLE_BANK register is a bank of 32-bit words where each bit
+represents one PDC pin. The bank index and bit position within the bank
+are encoded in the flat pin number as bits [31:5] and [4:0] respectively.
+
+Replace the open-coded division and modulo with FIELD_GET() and GENMASK()
+to make the bit extraction self-documenting and consistent with the
+FIELD_PREP() style already used in the PDC_VERSION() macro.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-7-mukesh.ojha@oss.qualcomm.com
+---
+ drivers/irqchip/qcom-pdc.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/irqchip/qcom-pdc.c b/drivers/irqchip/qcom-pdc.c
+index 5e1553334..638b5d89a 100644
+--- a/drivers/irqchip/qcom-pdc.c
++++ b/drivers/irqchip/qcom-pdc.c
+@@ -110,8 +110,8 @@ static void pdc_enable_intr_bank(int pin_out, bool on)
+ 	unsigned long enable;
+ 	u32 index, mask;
+ 
+-	index = pin_out / 32;
+-	mask = pin_out % 32;
++	index = FIELD_GET(GENMASK(31, 5), pin_out);
++	mask = FIELD_GET(GENMASK(4, 0), pin_out);
+ 
+ 	enable = pdc_reg_read(IRQ_ENABLE_BANK, index);
+ 	__assign_bit(mask, &enable, on);
+-- 
+2.43.0
+

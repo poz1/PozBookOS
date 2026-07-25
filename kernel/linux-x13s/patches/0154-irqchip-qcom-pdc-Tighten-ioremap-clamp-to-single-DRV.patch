@@ -1,0 +1,69 @@
+From c549de45aab4333cf83844c16a93b2b4562df188 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:40 +0530
+Subject: [PATCH 154/263] irqchip/qcom-pdc: Tighten ioremap clamp to single DRV
+ region size
+
+The QCOM_PDC_SIZE constant (0x30000) was introduced to work around old
+sm8150 DTs that described a too-small PDC register region, causing the
+driver to silently expand the ioremap to cover three DRV regions. Now
+that the preceding DT fixes have corrected all platforms to describe only
+the APSS DRV region (0x10000), the oversized clamp is no longer needed.
+
+Replace QCOM_PDC_SIZE with PDC_DRV_SIZE (0x10000) in the clamp so the
+minimum mapped size matches a single DRV region. The clamp and warning
+are intentionally kept to preserve backward compatibility with any old
+DTs that may still describe a smaller region.
+
+While at it, rename PDC_DRV_OFFSET to PDC_DRV_SIZE since the constant
+represents the size of a DRV region and is used as both the ioremap
+minimum size and the offset to the previous DRV region.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-4-mukesh.ojha@oss.qualcomm.com
+---
+ drivers/irqchip/qcom-pdc.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/irqchip/qcom-pdc.c b/drivers/irqchip/qcom-pdc.c
+index a72e32896..21e2b4b88 100644
+--- a/drivers/irqchip/qcom-pdc.c
++++ b/drivers/irqchip/qcom-pdc.c
+@@ -21,7 +21,7 @@
+ #include <linux/types.h>
+ 
+ #define PDC_MAX_GPIO_IRQS	256
+-#define PDC_DRV_OFFSET		0x10000
++#define PDC_DRV_SIZE		0x10000
+ 
+ /* Valid only on HW version < 3.2 */
+ #define IRQ_ENABLE_BANK		0x10
+@@ -358,7 +358,6 @@ static int pdc_setup_pin_mapping(struct device_node *np)
+ 	return 0;
+ }
+ 
+-#define QCOM_PDC_SIZE 0x30000
+ 
+ static int qcom_pdc_probe(struct platform_device *pdev, struct device_node *parent)
+ {
+@@ -372,7 +371,7 @@ static int qcom_pdc_probe(struct platform_device *pdev, struct device_node *pare
+ 	if (of_address_to_resource(node, 0, &res))
+ 		return -EINVAL;
+ 
+-	res_size = max_t(resource_size_t, resource_size(&res), QCOM_PDC_SIZE);
++	res_size = max_t(resource_size_t, resource_size(&res), PDC_DRV_SIZE);
+ 	if (res_size > resource_size(&res))
+ 		pr_warn("%pOF: invalid reg size, please fix DT\n", node);
+ 
+@@ -385,7 +384,7 @@ static int qcom_pdc_probe(struct platform_device *pdev, struct device_node *pare
+ 	 * region with the expected offset to preserve support for old DTs.
+ 	 */
+ 	if (of_device_is_compatible(node, "qcom,x1e80100-pdc")) {
+-		pdc_prev_base = ioremap(res.start - PDC_DRV_OFFSET, IRQ_ENABLE_BANK_MAX);
++		pdc_prev_base = ioremap(res.start - PDC_DRV_SIZE, IRQ_ENABLE_BANK_MAX);
+ 		if (!pdc_prev_base) {
+ 			pr_err("%pOF: unable to map previous PDC DRV region\n", node);
+ 			return -ENXIO;
+-- 
+2.43.0
+
