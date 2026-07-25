@@ -1,0 +1,74 @@
+From e1259b9d45aba71862cec90ea5b5accb78a4ab1c Mon Sep 17 00:00:00 2001
+From: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Date: Tue, 28 Apr 2026 14:07:17 +0530
+Subject: [PATCH 203/263] PCI: qcom: Program T_POWER_ON
+
+Some platforms have incorrect T_POWER_ON value programmed in hardware.
+Generally these will be corrected by bootloaders, but not all targets
+support bootloaders to program correct values due to that
+LTR_L1.2_THRESHOLD value calculated by aspm driver can be wrong, which
+can result in improper L1.2 exit behavior and if AER happens to be
+supported and enabled, the error may be *reported* via AER.
+
+Parse "t-power-on-us" property from each root port node and program them
+as part of host initialization using dw_pcie_program_t_power_on() before
+link training.
+
+This property in added to the dtschema here[1].
+
+Signed-off-by: Krishna Chaitanya Chundru <krishna.chundru@oss.qualcomm.com>
+Link[1]: https://lore.kernel.org/all/20260205093346.667898-1-krishna.chundru@oss.qualcomm.com/
+Link: https://lore.kernel.org/r/20260428-t_power_on_fux-v5-3-f1ef926a91ff@oss.qualcomm.com
+---
+ drivers/pci/controller/dwc/pcie-qcom.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 890063950..7c2316f63 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -269,6 +269,7 @@ struct qcom_pcie_perst {
+ struct qcom_pcie_port {
+ 	struct list_head list;
+ 	struct phy *phy;
++	u32 l1ss_t_power_on;
+ 	struct list_head perst;
+ };
+ 
+@@ -1283,6 +1284,14 @@ static int qcom_pcie_phy_power_on(struct qcom_pcie *pcie)
+ 	return 0;
+ }
+ 
++static void qcom_pcie_configure_ports(struct qcom_pcie *pcie)
++{
++	struct qcom_pcie_port *port;
++
++	list_for_each_entry(port, &pcie->ports, list)
++		dw_pcie_program_t_power_on(pcie->pci, port->l1ss_t_power_on);
++}
++
+ static int qcom_pcie_host_init(struct dw_pcie_rp *pp)
+ {
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+@@ -1317,6 +1326,8 @@ static int qcom_pcie_host_init(struct dw_pcie_rp *pp)
+ 	dw_pcie_remove_capability(pcie->pci, PCI_CAP_ID_MSIX);
+ 	dw_pcie_remove_ext_capability(pcie->pci, PCI_EXT_CAP_ID_DPC);
+ 
++	qcom_pcie_configure_ports(pcie);
++
+ 	qcom_pcie_perst_deassert(pcie);
+ 
+ 	if (pcie->cfg->ops->config_sid) {
+@@ -1770,6 +1781,9 @@ static int qcom_pcie_parse_port(struct qcom_pcie *pcie, struct device_node *node
+ 	if (ret)
+ 		return ret;
+ 
++	/* TODO: Need to move to DWC core once multi Root Port support is added.  */
++	of_property_read_u32(node, "t-power-on-us", &port->l1ss_t_power_on);
++
+ 	port->phy = phy;
+ 	INIT_LIST_HEAD(&port->list);
+ 	list_add_tail(&port->list, &pcie->ports);
+-- 
+2.43.0
+

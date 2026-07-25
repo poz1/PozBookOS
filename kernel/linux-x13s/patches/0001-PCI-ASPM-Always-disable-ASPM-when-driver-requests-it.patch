@@ -1,7 +1,7 @@
-From 8f101d215ce5d3d635d5ca3a09d32862937d0558 Mon Sep 17 00:00:00 2001
+From c78d7bd66bf00b5d2b61a43e81255524a00b00fd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ilpo=20J=C3=A4rvinen?= <ilpo.jarvinen@linux.intel.com>
 Date: Mon, 25 Aug 2025 23:14:36 +0530
-Subject: [PATCH] PCI/ASPM: Always disable ASPM when driver requests it
+Subject: [PATCH 001/263] PCI/ASPM: Always disable ASPM when driver requests it
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -47,10 +47,10 @@ Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
  1 file changed, 20 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/pci/pcie/aspm.c b/drivers/pci/pcie/aspm.c
-index cedea47a3547f4..80104ee50e234c 100644
+index 925373b98..a2762260b 100644
 --- a/drivers/pci/pcie/aspm.c
 +++ b/drivers/pci/pcie/aspm.c
-@@ -1402,16 +1402,23 @@ static int __pci_disable_link_state(struct pci_dev *pdev, int state, bool locked
+@@ -1409,16 +1409,23 @@ static int __pci_disable_link_state(struct pci_dev *pdev, int state, bool locked
  		return -EINVAL;
  	/*
  	 * A driver requested that ASPM be disabled on this device, but
@@ -82,7 +82,7 @@ index cedea47a3547f4..80104ee50e234c 100644
  
  	if (!locked)
  		down_read(&pci_bus_sem);
-@@ -1438,13 +1445,13 @@ int pci_disable_link_state_locked(struct pci_dev *pdev, int state)
+@@ -1445,13 +1452,13 @@ int pci_disable_link_state_locked(struct pci_dev *pdev, int state)
  EXPORT_SYMBOL(pci_disable_link_state_locked);
  
  /**
@@ -101,3 +101,6 @@ index cedea47a3547f4..80104ee50e234c 100644
   */
  int pci_disable_link_state(struct pci_dev *pdev, int state)
  {
+-- 
+2.43.0
+

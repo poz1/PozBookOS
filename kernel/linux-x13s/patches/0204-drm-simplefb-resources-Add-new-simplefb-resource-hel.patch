@@ -1,0 +1,484 @@
+From 182642aa863dd50d097c9e81932fd7ce2b2470df Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Sat, 18 Apr 2026 14:59:16 +0200
+Subject: [PATCH 204/263] drm: simplefb-resources: Add new simplefb resource
+ helpers
+
+The simpledrm (drm/kms) and simplefb (fbdev) drivers have a bunch of
+duplicate code for managing clock / regulator / PM-domains described
+in simple-framebuffer compatible DT-nodes.
+
+Add a set of helpers implementing this functionality.
+
+There are some differences between the mostly identical clk/regulator/pd
+handling in simpledrm / simplefb and these new helpers.
+
+1. clks/regulators/pd pointer array memory management:
+- simpledrm uses devm() memory-management for this
+- simplefb mixes devm() and manual memory-management for this
+
+2. Disabling/release clks/regulators/pds on driver-detach vs fb_destroy()
+- simpledrm uses devm_add_action() to disable/release on driver-detach
+- simpleb manually disables/releasees from its fb_destroy() call-back
+
+To avoid any behavior change here the new simplefb resource management
+helpers manually alloc memory and rely on its user manually calling
+simplefb_release_resources() to disable/release clk/regulator/pds and
+free memory.
+
+This way simplefb can simply call this from fb_destroy() and simepldrm
+can register a single devm-action calling this, leaving the behavior
+the same as before introducing the simplefb resource management helpers.
+
+3. Enabling clks/regulators in single loop vs enable as separate step
+- simpledrm uses a single loop to both get + enable clks/regulators
+  this means that if 1 clk/regulator returns -EPROBE_DEFER previously
+  gotten + enabled clks/regulators will get disabled
+- simplefb first gets all clks and regulators and attaches power-domains
+  and only after doing that successfully does it enable clks and regulators
+
+The simpledrm behavior here, with it disabling clks/regulators if a later
+clk/regulator returns -EPROBE_DEFER is undesirable. The whole purpose of
+having the clks/regulators in the simple-framebuffer DT node is keeping
+them on.
+
+The new simplefb resource management helpers follow the simplefb model.
+
+4. A behavior change in the new helpers is calling dev_err_probe() before
+checking for EPROBE_DEFER, so that the kernel's deferred_probe_timeout
+handling will log a defer reason if simpledrm/simplefb fail to bind
+indefinitely due to missing clk/regulator/pd drivers.
+
+5. The dev_get_platdata(&pdev->dev) checks from the original code are also
+dropped. These checks are not necessary since simple-frambuffer platform-
+devices instantiated with platform_data set never have an of_node.
+
+The simplefb and simpledrm drivers will be moved over to these new
+helpers in follow-up patches.
+
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ drivers/gpu/drm/Kconfig                  |   4 +
+ drivers/gpu/drm/Makefile                 |   1 +
+ drivers/gpu/drm/drm_simplefb_resources.c | 334 +++++++++++++++++++++++
+ include/drm/simplefb_resources.h         |  43 +++
+ 4 files changed, 382 insertions(+)
+ create mode 100644 drivers/gpu/drm/drm_simplefb_resources.c
+ create mode 100644 include/drm/simplefb_resources.h
+
+diff --git a/drivers/gpu/drm/Kconfig b/drivers/gpu/drm/Kconfig
+index d3d52310c..28b4d7c86 100644
+--- a/drivers/gpu/drm/Kconfig
++++ b/drivers/gpu/drm/Kconfig
+@@ -348,3 +348,7 @@ endif
+ # Separate option because drm_panel_orientation_quirks.c is shared with fbdev
+ config DRM_PANEL_ORIENTATION_QUIRKS
+ 	tristate
++
++# Separate option because drm_simplefb_resources.c is shared with fbdev
++config DRM_SIMPLEFB_RESOURCES
++	tristate
+diff --git a/drivers/gpu/drm/Makefile b/drivers/gpu/drm/Makefile
+index ec2c5ff82..3a3d5f046 100644
+--- a/drivers/gpu/drm/Makefile
++++ b/drivers/gpu/drm/Makefile
+@@ -98,6 +98,7 @@ obj-$(CONFIG_DRM)	+= drm.o
+ 
+ obj-$(CONFIG_DRM_PANEL_ORIENTATION_QUIRKS) += drm_panel_orientation_quirks.o
+ obj-$(CONFIG_DRM_PANEL_BACKLIGHT_QUIRKS) += drm_panel_backlight_quirks.o
++obj-$(CONFIG_DRM_SIMPLEFB_RESOURCES) += drm_simplefb_resources.o
+ 
+ #
+ # Memory-management helpers
+diff --git a/drivers/gpu/drm/drm_simplefb_resources.c b/drivers/gpu/drm/drm_simplefb_resources.c
+new file mode 100644
+index 000000000..374d37324
+--- /dev/null
++++ b/drivers/gpu/drm/drm_simplefb_resources.c
+@@ -0,0 +1,334 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Helper code for acquiring and releasing resources (clks, regulators, etc.)
++ * for devices with a firmware node following the simple-framebuffer compatible
++ * from: Documentation/devicetree/bindings/display/simple-framebuffer.yaml
++ *
++ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
++ *
++ * Based on drivers/gpu/drm/sysfb/simpledrm.c.
++ */
++
++#include <linux/clk.h>
++#include <linux/of_clk.h>
++#include <linux/pm_domain.h>
++#include <linux/regulator/consumer.h>
++
++#include <drm/simplefb_resources.h>
++
++#if defined CONFIG_OF && defined CONFIG_COMMON_CLK
++/*
++ * Clock handling code.
++ *
++ * Here we handle the clocks property of our "simple-framebuffer" dt node.
++ * This is necessary so that we can make sure that any clocks needed by
++ * the display engine that the bootloader set up for us (and for which it
++ * provided a simplefb dt node), stay up, for the life of the simplefb
++ * driver.
++ *
++ * When the driver unloads, we cleanly disable, and then release the clocks.
++ *
++ * We only complain about errors here, no action is taken as the most likely
++ * error can only happen due to a mismatch between the bootloader which set
++ * up simplefb, and the clock definitions in the device tree. Chances are
++ * that there are no adverse effects, and if there are, a clean teardown of
++ * the fb probe will not help us much either. So just complain and carry on,
++ * and hope that the user actually gets a working fb at the end of things.
++ */
++static int simplefb_get_clocks(struct device *dev, struct simplefb_resources *res)
++{
++	struct clk *clock;
++	unsigned int i;
++	int ret;
++
++	res->clk_count = of_clk_get_parent_count(dev->of_node);
++	if (!res->clk_count)
++		return 0;
++
++	res->clks = kzalloc_objs(struct clk *, res->clk_count);
++	if (!res->clks)
++		return -ENOMEM;
++
++	for (i = 0; i < res->clk_count; ++i) {
++		clock = of_clk_get(dev->of_node, i);
++		if (IS_ERR(clock)) {
++			ret = dev_err_probe(dev, PTR_ERR(clock), "getting clock %u\n", i);
++			if (ret == -EPROBE_DEFER)
++				goto err;
++			continue;
++		}
++		res->clks[i] = clock;
++	}
++
++	return 0;
++
++err:
++	while (i--)
++		clk_put(res->clks[i]);
++
++	kfree(res->clks);
++	return ret;
++}
++
++static void simplefb_enable_clocks(struct device *dev, struct simplefb_resources *res)
++{
++	int ret;
++
++	for (unsigned int i = 0; i < res->clk_count; ++i) {
++		ret = clk_prepare_enable(res->clks[i]);
++		if (ret)
++			dev_err(dev, "Error %pe enabling clock %u\n", ERR_PTR(ret), i);
++	}
++}
++
++static void simplefb_release_clocks(struct simplefb_resources *res, bool enabled)
++{
++	for (unsigned int i = 0; i < res->clk_count; ++i) {
++		if (enabled)
++			clk_disable_unprepare(res->clks[i]);
++		clk_put(res->clks[i]);
++	}
++	kfree(res->clks);
++}
++#else
++static int simplefb_get_clocks(struct device *dev, struct simplefb_resources *res)
++{
++	return 0;
++}
++static void simplefb_enable_clocks(struct device *dev, struct simplefb_resources *res) { }
++static void simplefb_release_clocks(struct simplefb_resources *res, bool enabled) { }
++#endif
++
++#if defined CONFIG_OF && defined CONFIG_REGULATOR
++
++#define SUPPLY_SUFFIX "-supply"
++
++/*
++ * Regulator handling code.
++ *
++ * Here we handle the num-supplies and vin*-supply properties of our
++ * "simple-framebuffer" dt node. This is necessary so that we can make sure
++ * that any regulators needed by the display hardware that the bootloader
++ * set up for us (and for which it provided a simplefb dt node), stay up,
++ * for the life of the simplefb driver.
++ *
++ * When the driver unloads, we cleanly disable, and then release the
++ * regulators.
++ *
++ * We only complain about errors here, no action is taken as the most likely
++ * error can only happen due to a mismatch between the bootloader which set
++ * up simplefb, and the regulator definitions in the device tree. Chances are
++ * that there are no adverse effects, and if there are, a clean teardown of
++ * the fb probe will not help us much either. So just complain and carry on,
++ * and hope that the user actually gets a working fb at the end of things.
++ */
++static int simplefb_get_regulators(struct device *dev, struct simplefb_resources *res)
++{
++	unsigned int count = 0, i = 0;
++	struct regulator *regulator;
++	struct property *prop;
++	const char *p;
++	int ret;
++
++	/* Count the number of regulator supplies */
++	for_each_property_of_node(dev->of_node, prop) {
++		p = strstr(prop->name, SUPPLY_SUFFIX);
++		if (p && p != prop->name)
++			++count;
++	}
++
++	if (!count)
++		return 0;
++
++	res->regulators = kzalloc_objs(struct regulator *, count);
++	if (!res->regulators)
++		return -ENOMEM;
++
++	for_each_property_of_node(dev->of_node, prop) {
++		char name[32]; /* 32 is max size of property name */
++		size_t len;
++
++		p = strstr(prop->name, SUPPLY_SUFFIX);
++		if (!p || p == prop->name)
++			continue;
++		len = strlen(prop->name) - strlen(SUPPLY_SUFFIX) + 1;
++		strscpy(name, prop->name, min(sizeof(name), len));
++
++		regulator = regulator_get_optional(dev, name);
++		if (IS_ERR(regulator)) {
++			ret = dev_err_probe(dev, PTR_ERR(regulator),
++					    "getting regulator %s\n", name);
++			if (ret == -EPROBE_DEFER)
++				goto err;
++			continue;
++		}
++		res->regulators[i++] = regulator;
++	}
++	res->regulator_count = i;
++
++	return 0;
++
++err:
++	while (i--)
++		regulator_put(res->regulators[i]);
++
++	kfree(res->regulators);
++	return ret;
++}
++
++static void simplefb_enable_regulators(struct device *dev, struct simplefb_resources *res)
++{
++	int ret;
++
++	for (unsigned int i = 0; i < res->regulator_count; ++i) {
++		ret = regulator_enable(res->regulators[i]);
++		if (ret)
++			dev_err(dev, "Error %pe enabling regulator %u\n", ERR_PTR(ret), i);
++	}
++}
++
++static void simplefb_release_regulators(struct simplefb_resources *res, bool enabled)
++{
++	for (unsigned int i = 0; i < res->regulator_count; ++i) {
++		if (enabled)
++			regulator_disable(res->regulators[i]);
++		regulator_put(res->regulators[i]);
++	}
++	kfree(res->regulators);
++}
++#else
++static int simplefb_get_regulators(struct device *dev, struct simplefb_resources *res)
++{
++	return 0;
++}
++static void simplefb_enable_regulators(struct device *dev, struct simplefb_resources *res) { }
++static void simplefb_release_regulators(struct simplefb_resources *res, bool enabled) { }
++#endif
++
++#if defined CONFIG_OF && defined CONFIG_PM_GENERIC_DOMAINS
++/*
++ * Generic power domain handling code.
++ *
++ * Here we handle the power-domains properties of our "simple-framebuffer"
++ * dt node. This is only necessary if there is more than one power-domain.
++ * A single power-domains is handled automatically by the driver core. Multiple
++ * power-domains have to be handled by drivers since the driver core can't know
++ * the correct power sequencing. Power sequencing is not an issue for simplefb
++ * since the bootloader has put the power domains already in the correct state.
++ * simplefb has only to ensure they remain active for its lifetime.
++ *
++ * When the driver unloads, we detach from the power-domains.
++ *
++ * We only complain about errors here, no action is taken as the most likely
++ * error can only happen due to a mismatch between the bootloader which set
++ * up the "simple-framebuffer" dt node, and the PM domain providers in the
++ * device tree. Chances are that there are no adverse effects, and if there are,
++ * a clean teardown of the fb probe will not help us much either. So just
++ * complain and carry on, and hope that the user actually gets a working fb at
++ * the end of things.
++ */
++static void simplefb_detach_genpd(struct simplefb_resources *res)
++{
++	int i;
++
++	if (res->pwr_dom_count <= 1)
++		return;
++
++	for (i = res->pwr_dom_count - 1; i >= 0; i--) {
++		if (res->pwr_dom_links[i])
++			device_link_del(res->pwr_dom_links[i]);
++		if (!IS_ERR_OR_NULL(res->pwr_dom_devs[i]))
++			dev_pm_domain_detach(res->pwr_dom_devs[i], true);
++	}
++	kfree(res->pwr_dom_links);
++	kfree(res->pwr_dom_devs);
++}
++
++static int simplefb_attach_genpd(struct device *dev, struct simplefb_resources *res)
++{
++	int i, ret;
++
++	res->pwr_dom_count = of_count_phandle_with_args(dev->of_node, "power-domains",
++							"#power-domain-cells");
++	/*
++	 * Single power-domain devices are handled by driver core nothing to do
++	 * here. The same for device nodes without "power-domains" property.
++	 */
++	if (res->pwr_dom_count <= 1)
++		return 0;
++
++	res->pwr_dom_devs = kzalloc_objs(struct device *, res->pwr_dom_count);
++	res->pwr_dom_links = kzalloc_objs(struct device_link *, res->pwr_dom_count);
++	if (!res->pwr_dom_devs || !res->pwr_dom_links) {
++		kfree(res->pwr_dom_links);
++		kfree(res->pwr_dom_devs);
++		return -ENOMEM;
++	}
++
++	for (i = 0; i < res->pwr_dom_count; i++) {
++		res->pwr_dom_devs[i] = dev_pm_domain_attach_by_id(dev, i);
++		if (IS_ERR(res->pwr_dom_devs[i])) {
++			ret = dev_err_probe(dev, PTR_ERR(res->pwr_dom_devs[i]),
++					    "attaching PM domain %d\n", i);
++			if (ret == -EPROBE_DEFER) {
++				simplefb_detach_genpd(res);
++				return ret;
++			}
++			continue;
++		}
++
++		res->pwr_dom_links[i] = device_link_add(dev,
++							res->pwr_dom_devs[i],
++							DL_FLAG_STATELESS |
++							DL_FLAG_PM_RUNTIME |
++							DL_FLAG_RPM_ACTIVE);
++		if (!res->pwr_dom_links[i])
++			dev_warn(dev, "failed to link PM domain %d\n", i);
++	}
++
++	return 0;
++}
++#else
++static int simplefb_attach_genpd(struct device *dev, struct simplefb_resources *res)
++{
++	return 0;
++}
++static void simplefb_detach_genpd(struct simplefb_resources *res) { }
++#endif
++
++int simplefb_acquire_resources(struct device *dev, struct simplefb_resources *res)
++{
++	int ret;
++
++	if (!dev->of_node)
++		return 0;
++
++	ret = simplefb_get_clocks(dev, res);
++	if (ret)
++		return ret;
++
++	ret = simplefb_get_regulators(dev, res);
++	if (ret) {
++		simplefb_release_clocks(res, false);
++		return ret;
++	}
++
++	ret = simplefb_attach_genpd(dev, res);
++	if (ret) {
++		simplefb_release_regulators(res, false);
++		simplefb_release_clocks(res, false);
++		return ret;
++	}
++
++	simplefb_enable_clocks(dev, res);
++	simplefb_enable_regulators(dev, res);
++
++	return 0;
++}
++
++void simplefb_release_resources(struct simplefb_resources *res)
++{
++	simplefb_release_regulators(res, true);
++	simplefb_release_clocks(res, true);
++	simplefb_detach_genpd(res);
++}
+diff --git a/include/drm/simplefb_resources.h b/include/drm/simplefb_resources.h
+new file mode 100644
+index 000000000..094eebedd
+--- /dev/null
++++ b/include/drm/simplefb_resources.h
+@@ -0,0 +1,43 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/*
++ * Helper code for acquiring and releasing resources (clks, regulators, etc.)
++ * for devices with a firmware node following the simple-framebuffer compatible
++ * from: Documentation/devicetree/bindings/display/simple-framebuffer.yaml
++ *
++ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
++ *
++ * Based on drivers/gpu/drm/sysfb/simpledrm.c.
++ */
++#ifndef _SIMPLEFB_RESOURCES_H_
++#define _SIMPLEFB_RESOURCES_H_
++
++#include <linux/kconfig.h>
++
++struct clk;
++struct device;
++struct device_link;
++struct regulator;
++
++struct simplefb_resources {
++#if defined CONFIG_OF && defined CONFIG_COMMON_CLK
++	/* clocks */
++	unsigned int clk_count;
++	struct clk **clks;
++#endif
++#if defined CONFIG_OF && defined CONFIG_REGULATOR
++	/* regulators */
++	unsigned int regulator_count;
++	struct regulator **regulators;
++#endif
++#if defined CONFIG_OF && defined CONFIG_PM_GENERIC_DOMAINS
++	/* power-domains */
++	int pwr_dom_count;
++	struct device **pwr_dom_devs;
++	struct device_link **pwr_dom_links;
++#endif
++};
++
++int simplefb_acquire_resources(struct device *dev, struct simplefb_resources *res);
++void simplefb_release_resources(struct simplefb_resources *res);
++
++#endif
+-- 
+2.43.0
+

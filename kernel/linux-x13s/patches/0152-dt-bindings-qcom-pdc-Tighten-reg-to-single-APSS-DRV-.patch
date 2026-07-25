@@ -1,0 +1,38 @@
+From 00118178519c31bc2ddf756dabde91ffbe2c2e9d Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:38 +0530
+Subject: [PATCH 152/263] dt-bindings: qcom,pdc: Tighten reg to single APSS DRV
+ region
+
+The PDC has multiple DRV regions, each sized 0x10000, where each region
+serves a specific client in the system. Linux only needs access to the
+APSS DRV region, so the reg property should describe exactly one DRV
+region of size 0x10000.
+
+The example was using 0x30000 (three DRV regions) which is incorrect.
+Fix it to use 0x10000 to match the single APSS DRV region that the
+driver actually maps, consistent with the DT fixes applied across all
+platforms in this series.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-2-mukesh.ojha@oss.qualcomm.com
+---
+ .../devicetree/bindings/interrupt-controller/qcom,pdc.yaml      | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/interrupt-controller/qcom,pdc.yaml b/Documentation/devicetree/bindings/interrupt-controller/qcom,pdc.yaml
+index f9321366c..786709f2d 100644
+--- a/Documentation/devicetree/bindings/interrupt-controller/qcom,pdc.yaml
++++ b/Documentation/devicetree/bindings/interrupt-controller/qcom,pdc.yaml
+@@ -96,7 +96,7 @@ examples:
+ 
+     pdc: interrupt-controller@b220000 {
+         compatible = "qcom,sdm845-pdc", "qcom,pdc";
+-        reg = <0xb220000 0x30000>;
++        reg = <0xb220000 0x10000>;
+         qcom,pdc-ranges = <0 512 94>, <94 641 15>, <115 662 7>;
+         #interrupt-cells = <2>;
+         interrupt-parent = <&intc>;
+-- 
+2.43.0
+

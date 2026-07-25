@@ -1,0 +1,47 @@
+From c236d620dbd802dcd5a1cc6df24e3da28eca81f3 Mon Sep 17 00:00:00 2001
+From: Loic Poulain <loic.poulain@oss.qualcomm.com>
+Date: Wed, 21 Jan 2026 15:28:24 +0100
+Subject: [PATCH 129/263] phy: qcom: qmp-usbc: Prevent unnecessary PM runtime
+ suspend at boot
+
+There is a small window where the device can suspend after
+pm_runtime_enable() and before pm_runtime_forbid(), causing an
+unnecessary suspend/resume cycle while the PHY is not yet registered.
+
+Move pm_runtime_forbid() before pm_runtime_enable() to eliminate
+this race.
+
+Signed-off-by: Loic Poulain <loic.poulain@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260121142827.2583-4-loic.poulain@oss.qualcomm.com
+---
+ drivers/phy/qualcomm/phy-qcom-qmp-usbc.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/phy/qualcomm/phy-qcom-qmp-usbc.c b/drivers/phy/qualcomm/phy-qcom-qmp-usbc.c
+index 0dd700061..a83392571 100644
+--- a/drivers/phy/qualcomm/phy-qcom-qmp-usbc.c
++++ b/drivers/phy/qualcomm/phy-qcom-qmp-usbc.c
+@@ -1959,15 +1959,15 @@ static int qmp_usbc_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		goto err_node_put;
+ 
++	/*
++	 * Enable runtime PM support, but forbid it by default.
++	 * Users can allow it again via the power/control attribute in sysfs.
++	 */
+ 	pm_runtime_set_active(dev);
++	pm_runtime_forbid(dev);
+ 	ret = devm_pm_runtime_enable(dev);
+ 	if (ret)
+ 		goto err_node_put;
+-	/*
+-	 * Prevent runtime pm from being ON by default. Users can enable
+-	 * it using power/control in sysfs.
+-	 */
+-	pm_runtime_forbid(dev);
+ 
+ 	ret = qmp_usbc_register_clocks(qmp, np);
+ 	if (ret)
+-- 
+2.43.0
+

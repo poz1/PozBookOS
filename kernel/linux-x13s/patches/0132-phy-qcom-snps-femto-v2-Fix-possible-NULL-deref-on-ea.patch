@@ -1,0 +1,73 @@
+From d248ad1cb456ffe30acf799c9ba82e9c21b3f39d Mon Sep 17 00:00:00 2001
+From: Loic Poulain <loic.poulain@oss.qualcomm.com>
+Date: Wed, 21 Jan 2026 15:28:27 +0100
+Subject: [PATCH 132/263] phy: qcom: snps-femto-v2: Fix possible NULL-deref on
+ early runtime suspend
+
+Enabling runtime PM before attaching the hsphy instance as driver data
+can lead to a NULL pointer dereference in runtime PM callbacks that
+expect valid driver data. There is a small window where the suspend
+callback may run after PM runtime enabling and before runtime forbid.
+
+Attach the hsphy instance as driver data before enabling runtime PM to
+prevent NULL pointer dereference in runtime PM callbacks.
+
+Reorder pm_runtime_enable() and pm_runtime_forbid() to prevent a
+short window where an unnecessary runtime suspend can occur.
+
+Use the devres-managed version to ensure PM runtime is symmetrically
+disabled during driver removal for proper cleanup.
+
+Fixes: 0d75f508a9d5 ("phy: qcom-snps: Add runtime suspend and resume handlers")
+Signed-off-by: Loic Poulain <loic.poulain@oss.qualcomm.com>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260121142827.2583-7-loic.poulain@oss.qualcomm.com
+---
+ drivers/phy/qualcomm/phy-qcom-snps-femto-v2.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/phy/qualcomm/phy-qcom-snps-femto-v2.c b/drivers/phy/qualcomm/phy-qcom-snps-femto-v2.c
+index eb0b0f61d..d1288a6c2 100644
+--- a/drivers/phy/qualcomm/phy-qcom-snps-femto-v2.c
++++ b/drivers/phy/qualcomm/phy-qcom-snps-femto-v2.c
+@@ -599,13 +599,17 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
+ 		return dev_err_probe(dev, ret,
+ 				     "failed to get regulator supplies\n");
+ 
+-	pm_runtime_set_active(dev);
+-	pm_runtime_enable(dev);
++	dev_set_drvdata(dev, hsphy);
++
+ 	/*
+-	 * Prevent runtime pm from being ON by default. Users can enable
+-	 * it using power/control in sysfs.
++	 * Enable runtime PM support, but forbid it by default.
++	 * Users can allow it again via the power/control attribute in sysfs.
+ 	 */
++	pm_runtime_set_active(dev);
+ 	pm_runtime_forbid(dev);
++	ret = devm_pm_runtime_enable(dev);
++	if (ret)
++		return ret;
+ 
+ 	generic_phy = devm_phy_create(dev, NULL, &qcom_snps_hsphy_gen_ops);
+ 	if (IS_ERR(generic_phy)) {
+@@ -615,15 +619,12 @@ static int qcom_snps_hsphy_probe(struct platform_device *pdev)
+ 	}
+ 	hsphy->phy = generic_phy;
+ 
+-	dev_set_drvdata(dev, hsphy);
+ 	phy_set_drvdata(generic_phy, hsphy);
+ 	qcom_snps_hsphy_read_override_param_seq(dev);
+ 
+ 	phy_provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
+ 	if (!IS_ERR(phy_provider))
+ 		dev_dbg(dev, "Registered Qcom-SNPS HS phy\n");
+-	else
+-		pm_runtime_disable(dev);
+ 
+ 	return PTR_ERR_OR_ZERO(phy_provider);
+ }
+-- 
+2.43.0
+

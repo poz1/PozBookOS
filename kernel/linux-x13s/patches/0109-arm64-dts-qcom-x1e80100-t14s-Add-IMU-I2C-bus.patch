@@ -1,0 +1,50 @@
+From c0a95116576a1f6f4220c1cb02742af2ba004248 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Tue, 17 Feb 2026 02:38:55 +0100
+Subject: [PATCH 109/263] arm64: dts: qcom: x1e80100-t14s: Add IMU I2C bus
+
+Describe I2C bus used for the IMU / accelerometer contained in the
+T14s.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+---
+ .../dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi  | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index e74507151..0afec17b9 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -68,6 +68,16 @@ switch-lid {
+ 		};
+ 	};
+ 
++	i2c {
++		compatible = "i2c-gpio";
++		sda-gpios = <&tlmm 215 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
++		scl-gpios = <&tlmm 216 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
++		pinctrl-0 = <&i2c_imu_default>;
++		pinctrl-names = "default";
++		#address-cells = <1>;
++		#size-cells = <0>;
++	};
++
+ 	leds {
+ 		compatible = "gpio-leds";
+ 
+@@ -1770,6 +1780,12 @@ hall_int_n_default: hall-int-n-state {
+ 		bias-disable;
+ 	};
+ 
++	i2c_imu_default: i2c-imu-default {
++		pins = "gpio215", "gpio216";
++		function = "gpio";
++		bias-pull-up;
++	};
++
+ 	pcie4_default: pcie4-default-state {
+ 		clkreq-n-pins {
+ 			pins = "gpio147";
+-- 
+2.43.0
+

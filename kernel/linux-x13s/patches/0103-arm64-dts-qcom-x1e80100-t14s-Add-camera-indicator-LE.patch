@@ -1,0 +1,76 @@
+From a691b58bb34856b30a4a8815f4e003ba2c302f26 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Sat, 13 Dec 2025 18:59:54 +0900
+Subject: [PATCH 103/263] arm64: dts: qcom: x1e80100-t14s: Add camera indicator
+ LED
+
+Add support for the camera status indicator LED. Note that the camera
+cover also covers this LED when it is closed.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+---
+ .../qcom/x1e78100-lenovo-thinkpad-t14s.dtsi   | 27 +++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index 1e30a9234..4eb649464 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -9,6 +9,7 @@
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/input/gpio-keys.h>
+ #include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
+ #include <dt-bindings/phy/phy.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+ #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+@@ -67,6 +68,22 @@ switch-lid {
+ 		};
+ 	};
+ 
++	leds {
++		compatible = "gpio-leds";
++
++		pinctrl-names = "default";
++		pinctrl-0 = <&cam_indicator_en>;
++
++		privacy_led: led-camera-indicator {
++			label = "platform:white:camera-indicator";
++			function = LED_FUNCTION_INDICATOR;
++			color = <LED_COLOR_ID_WHITE>;
++			gpios = <&tlmm 110 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "none";
++			default-state = "off";
++		};
++	};
++
+ 	hdmi-bridge {
+ 		compatible = "realtek,rtd2171";
+ 
+@@ -1010,6 +1027,9 @@ camera@36 {
+ 		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
+ 		assigned-clock-rates = <19200000>;
+ 
++		leds = <&privacy_led>;
++		led-names = "privacy";
++
+ 		orientation = <0>; /* front facing */
+ 		rotation = <0>; /* not rotated */
+ 
+@@ -1645,6 +1665,13 @@ ec_int_n_default: ec-int-n-state {
+ 		bias-disable;
+ 	};
+ 
++	cam_indicator_en: cam-indicator-en-state {
++		pins = "gpio110";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++	};
++
+ 	cam_rgb_default: cam-rgb-default-state {
+ 		mclk-pins {
+ 			pins = "gpio100";
+-- 
+2.43.0
+

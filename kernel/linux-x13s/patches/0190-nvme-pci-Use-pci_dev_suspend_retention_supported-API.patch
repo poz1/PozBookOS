@@ -1,0 +1,51 @@
+From 614d0dd8e46ce1c6d73ec53791a89c0c9ae2bc52 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Tue, 14 Apr 2026 21:29:42 +0530
+Subject: [PATCH 190/263] nvme-pci: Use pci_dev_suspend_retention_supported()
+ API during suspend
+
+The pci_dev_suspend_retention_supported() API lets PCI client drivers
+know if the platform can retain the device context during suspend. This
+is decided based on several factors like:
+
+1. Firmware involvement at the end of suspend
+2. Any platform limitation in waking from low power state (L1ss)
+
+And this API might also get extended in the future to cover other platform
+specific issues impacting the device low power mode during system suspend.
+
+So use this API instead of checks like pm_suspend_via_firmware(). When this
+API returns false, then assume that the platform cannot retain the context
+and shutdown the controller. If it returns true, then assume that the
+context will be retained and keep the device in low power mode.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260414-l1ss-fix-v1-4-adbb4555b5ab@oss.qualcomm.com
+---
+ drivers/nvme/host/pci.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+index a0e9767bc..6a3475970 100644
+--- a/drivers/nvme/host/pci.c
++++ b/drivers/nvme/host/pci.c
+@@ -3944,6 +3944,7 @@ static int nvme_suspend(struct device *dev)
+ 	 * use host managed nvme power settings for lowest idle power if
+ 	 * possible. This should have quicker resume latency than a full device
+ 	 * shutdown.  But if the firmware is involved after the suspend or the
++	 * platform has any limitation in waking from low power states or the
+ 	 * device does not support any non-default power states, shut down the
+ 	 * device fully.
+ 	 *
+@@ -3952,7 +3953,7 @@ static int nvme_suspend(struct device *dev)
+ 	 * down, so as to allow the platform to achieve its minimum low-power
+ 	 * state (which may not be possible if the link is up).
+ 	 */
+-	if (pm_suspend_via_firmware() || !ctrl->npss ||
++	if (!pci_dev_suspend_retention_supported(pdev) || !ctrl->npss ||
+ 	    !pcie_aspm_enabled(pdev) ||
+ 	    (ndev->ctrl.quirks & NVME_QUIRK_SIMPLE_SUSPEND))
+ 		return nvme_disable_prepare_reset(ndev, true);
+-- 
+2.43.0
+

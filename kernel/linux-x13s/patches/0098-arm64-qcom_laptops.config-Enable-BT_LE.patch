@@ -1,0 +1,33 @@
+From c03f2949e4ed3294fc967f245337fcb2ff65ec02 Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Sat, 6 Dec 2025 17:10:53 -0600
+Subject: [PATCH 098/263] arm64: qcom_laptops.config: Enable BT_LE
+
+Enable Bluetooth Low Energy options so that modern bluetooth devices can
+be used by users.
+
+Signed-off-by: Steev Klimaszewski <threeway@gmail.com>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index a2664bd01..f165180c8 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -58,6 +58,11 @@
+ # TODO: Is this stable enough to be enabled for all SoCs in defconfig?
+ CONFIG_QCOM_TZMEM_MODE_SHMBRIDGE=y
+ 
++# Modern Bluetooth devices (like mice) need this to work properly
++# Without, they will connect but not actually work
++CONFIG_BT_LE=y
++CONFIG_BT_LE_L2CAP_ECRED=y
++
+ # Full disk encryption
+ CONFIG_DM_CRYPT=m
+ 
+-- 
+2.43.0
+

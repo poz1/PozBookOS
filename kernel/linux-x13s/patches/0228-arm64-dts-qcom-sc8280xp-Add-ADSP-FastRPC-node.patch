@@ -1,0 +1,57 @@
+From 867703ed93152a9ae2b8ea444699534259f2a539 Mon Sep 17 00:00:00 2001
+From: Pengyu Luo <mitltlatltl@gmail.com>
+Date: Fri, 3 Apr 2026 20:07:52 +0800
+Subject: [PATCH 228/263] arm64: dts: qcom: sc8280xp: Add ADSP FastRPC node
+
+Add the FastRPC node to enable offloading compute tasks to the ADSP
+via the FastRPC framework.
+
+Signed-off-by: Pengyu Luo <mitltlatltl@gmail.com>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260403120753.105869-1-mitltlatltl@gmail.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 27 ++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 547797cc0..f82eeb591 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -2968,6 +2968,33 @@ IPCC_MPROC_SIGNAL_GLINK_QMP
+ 				label = "lpass";
+ 				qcom,remote-pid = <2>;
+ 
++				fastrpc {
++					compatible = "qcom,fastrpc";
++					qcom,glink-channels = "fastrpcglink-apps-dsp";
++					label = "adsp";
++					qcom,non-secure-domain;
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					compute-cb@3 {
++						compatible = "qcom,fastrpc-compute-cb";
++						reg = <3>;
++						iommus = <&apps_smmu 0x0c03 0x0>;
++					};
++
++					compute-cb@4 {
++						compatible = "qcom,fastrpc-compute-cb";
++						reg = <4>;
++						iommus = <&apps_smmu 0x0c04 0x0>;
++					};
++
++					compute-cb@5 {
++						compatible = "qcom,fastrpc-compute-cb";
++						reg = <5>;
++						iommus = <&apps_smmu 0x0c05 0x0>;
++					};
++				};
++
+ 				gpr {
+ 					compatible = "qcom,gpr";
+ 					qcom,glink-channels = "adsp_apps";
+-- 
+2.43.0
+

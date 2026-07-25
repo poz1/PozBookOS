@@ -1,0 +1,34 @@
+From c73cf4282d49cb79ee8e4bd59401aeb487cac867 Mon Sep 17 00:00:00 2001
+From: Jie Zhang <jie.zhang@oss.qualcomm.com>
+Date: Fri, 5 Jun 2026 01:38:22 +0530
+Subject: [PATCH 254/263] drm/msm: Fix task_struct reference leak in
+ recover_worker
+
+get_pid_task() increments the task reference count, but the
+corresponding put_task_struct() was missing in the else branch,
+leaking a reference on every GPU hang recovery.
+
+Fixes: 25654a1756a4 ("drm/msm: Update global fault counter when faulty process has already ended")
+Signed-off-by: Jie Zhang <jie.zhang@oss.qualcomm.com>
+Signed-off-by: Akhil P Oommen <akhilpo@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260605-assorted-fixes-june-v1-6-2caa04f7287c@oss.qualcomm.com
+---
+ drivers/gpu/drm/msm/msm_gpu.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/msm/msm_gpu.c b/drivers/gpu/drm/msm/msm_gpu.c
+index 87dbab260..73ebc51ec 100644
+--- a/drivers/gpu/drm/msm/msm_gpu.c
++++ b/drivers/gpu/drm/msm/msm_gpu.c
+@@ -503,6 +503,8 @@ static void recover_worker(struct kthread_work *work)
+ 		 */
+ 		if (!vm->managed)
+ 			msm_gem_vm_unusable(submit->vm);
++
++		put_task_struct(task);
+ 	}
+ 
+ 	get_comm_cmdline(submit, &comm, &cmd);
+-- 
+2.43.0
+

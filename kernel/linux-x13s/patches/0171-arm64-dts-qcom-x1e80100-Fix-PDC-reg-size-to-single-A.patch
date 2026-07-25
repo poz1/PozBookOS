@@ -1,0 +1,32 @@
+From 60705428d20b2de58cb3b50f9e0715bc317fbc25 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:57 +0530
+Subject: [PATCH 171/263] arm64: dts: qcom: x1e80100: Fix PDC reg size to
+ single APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-21-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/hamoa.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/hamoa.dtsi b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+index eb4a91a7f..85cc8f067 100644
+--- a/arch/arm64/boot/dts/qcom/hamoa.dtsi
++++ b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+@@ -6355,7 +6355,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,x1e80100-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x30000>, <0 0x174000f0 0 0x64>;
++			reg = <0 0x0b220000 0 0x10000>, <0 0x174000f0 0 0x64>;
+ 
+ 			qcom,pdc-ranges = <0 480 42>, <42 251 5>,
+ 					  <47 522 52>, <99 609 32>,
+-- 
+2.43.0
+

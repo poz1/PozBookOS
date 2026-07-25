@@ -1,0 +1,45 @@
+From c12d856ddb8de6fed7f1f527a9ac87f3b504a77c Mon Sep 17 00:00:00 2001
+From: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Date: Mon, 27 Apr 2026 16:02:46 +0200
+Subject: [PATCH 210/263] drm: simplefb-resources: Use
+ __clk_disable_unprepare_counts_only()
+
+simplefb_acquire_resources() calls clk_prepare_enable() to avoid clocks
+used by the framebuffer getting turned of while in use.
+
+This requires simplefb_release_resources() calling clk_disable_unprepare()
+to balance the enable count. clk_disable_unprepare() actually turns the
+clock off, messing with the hardware state before the real display driver
+loads, without any knowledge of the proper display power-off sequence.
+
+Sometimes this leaves the hardware in an undefined state e.g. on some
+Qualcomm platforms turning off the DP clocks at simpledrm remove() results
+in the following error when the msm display driver tries to re-enable them:
+
+[    2.980181] disp_cc_mdss_dptx3_pixel0_clk_src: rcg didn't update its configuration.
+[    2.980272] WARNING: drivers/clk/qcom/clk-rcg2.c:136 at update_config+0xdc/0x100
+
+Switch to using the new __clk_disable_unprepare_counts_only() function,
+which decrements the counts without actually turning off the clocks.
+
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+---
+ drivers/gpu/drm/drm_simplefb_resources.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/drm_simplefb_resources.c b/drivers/gpu/drm/drm_simplefb_resources.c
+index 374d37324..26660e0e8 100644
+--- a/drivers/gpu/drm/drm_simplefb_resources.c
++++ b/drivers/gpu/drm/drm_simplefb_resources.c
+@@ -85,7 +85,7 @@ static void simplefb_release_clocks(struct simplefb_resources *res, bool enabled
+ {
+ 	for (unsigned int i = 0; i < res->clk_count; ++i) {
+ 		if (enabled)
+-			clk_disable_unprepare(res->clks[i]);
++			__clk_disable_unprepare_counts_only(res->clks[i]);
+ 		clk_put(res->clks[i]);
+ 	}
+ 	kfree(res->clks);
+-- 
+2.43.0
+

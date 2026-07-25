@@ -1,0 +1,33 @@
+From 309bdb1c8c716fd667cc9d00100b7a2056ab76e7 Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <steev@kali.org>
+Date: Thu, 2 Jan 2025 12:48:39 -0600
+Subject: [PATCH 112/263] wifi: ath11k: Override spammy warn for msdu_done
+
+This check is spamming the kernel logs with
+
+ath11k_pci 0006:01:00.0: msdu_done bit in attention is not set
+
+And unfortunately no one has had the time to look into what causes it,
+so override the warning for now.
+
+Not-Signed-off-by: Steev Klimaszewski <steev@kali.org>
+---
+ drivers/net/wireless/ath/ath11k/dp_rx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/ath/ath11k/dp_rx.c b/drivers/net/wireless/ath/ath11k/dp_rx.c
+index 9bbafbd69..e84ac8163 100644
+--- a/drivers/net/wireless/ath/ath11k/dp_rx.c
++++ b/drivers/net/wireless/ath/ath11k/dp_rx.c
+@@ -2535,7 +2535,7 @@ static int ath11k_dp_rx_process_msdu(struct ath11k *ar,
+ 	lrx_desc = (struct hal_rx_desc *)last_buf->data;
+ 	rx_attention = ath11k_dp_rx_get_attention(ab, lrx_desc);
+ 	if (!ath11k_dp_rx_h_attn_msdu_done(rx_attention)) {
+-		ath11k_warn(ab, "msdu_done bit in attention is not set\n");
++		/* ath11k_warn(ab, "msdu_done bit in attention is not set\n"); */
+ 		ret = -EIO;
+ 		goto free_out;
+ 	}
+-- 
+2.43.0
+

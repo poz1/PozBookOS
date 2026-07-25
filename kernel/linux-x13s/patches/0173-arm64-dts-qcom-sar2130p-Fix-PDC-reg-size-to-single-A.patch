@@ -1,0 +1,32 @@
+From 6a5c354cf69871b1239405154f5a013e31b63fa4 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:59 +0530
+Subject: [PATCH 173/263] arm64: dts: qcom: sar2130p: Fix PDC reg size to
+ single APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-23-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sar2130p.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sar2130p.dtsi b/arch/arm64/boot/dts/qcom/sar2130p.dtsi
+index d65ad0df6..c4d48f657 100644
+--- a/arch/arm64/boot/dts/qcom/sar2130p.dtsi
++++ b/arch/arm64/boot/dts/qcom/sar2130p.dtsi
+@@ -2417,7 +2417,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sar2130p-pdc", "qcom,pdc";
+-			reg = <0x0 0x0b220000 0x0 0x30000>, <0x0 0x174000f0 0x0 0x64>;
++			reg = <0x0 0x0b220000 0x0 0x10000>, <0x0 0x174000f0 0x0 0x64>;
+ 			qcom,pdc-ranges = <0 480 94>,
+ 					  <94 609 31>,
+ 					  <125 63 1>,
+-- 
+2.43.0
+

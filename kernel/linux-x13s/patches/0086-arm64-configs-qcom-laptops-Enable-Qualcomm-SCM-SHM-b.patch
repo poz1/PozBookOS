@@ -1,0 +1,33 @@
+From 6315526bfa3bb764f811f6df6bb837341f7584d0 Mon Sep 17 00:00:00 2001
+From: Stephan Gerhold <stephan.gerhold@linaro.org>
+Date: Mon, 21 Jul 2025 14:21:24 +0200
+Subject: [PATCH 086/263] arm64: configs: qcom-laptops: Enable Qualcomm SCM SHM
+ bridge
+
+Enabling SHM bridge support is required to have SCM calls properly working
+in EL2.
+
+Signed-off-by: Stephan Gerhold <stephan.gerhold@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index babfe278f..a2664bd01 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -54,6 +54,10 @@
+ # CONFIG_DRM_TIDSS is not set
+ # CONFIG_DRM_POWERVR is not set
+ 
++# Needed to have SCM calls properly working in EL2
++# TODO: Is this stable enough to be enabled for all SoCs in defconfig?
++CONFIG_QCOM_TZMEM_MODE_SHMBRIDGE=y
++
+ # Full disk encryption
+ CONFIG_DM_CRYPT=m
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,30 @@
+From ae90e9b39b892d1d50f289f4a1860661e546aaaa Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Fri, 17 Oct 2025 14:38:27 +0200
+Subject: [PATCH 066/263] arm64: qcom_laptops.config: Enable EXFAT_FS
+
+Enable exFAT filesystem, popular replacement for VFAT/FAT32 on bigger
+USB flash disks shared with Windows users.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index f8b969870..ea1be4d49 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -80,6 +80,7 @@ CONFIG_NF_CONNTRACK=m
+ CONFIG_USB_NET_RNDIS_HOST=m
+ 
+ # Typical use-cases for desktop/laptop
++CONFIG_EXFAT_FS=m
+ CONFIG_NTFS_FS=m
+ CONFIG_SND_USB_AUDIO=m
+ CONFIG_SND_SOC_USB=m
+-- 
+2.43.0
+

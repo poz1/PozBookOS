@@ -1,0 +1,40 @@
+From 5a2f041341869de59e5d25a577019501b0576115 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Sat, 10 Jan 2026 01:01:50 +0100
+Subject: [PATCH 108/263] platform: arm64: thinkpad-t14s-ec: update thermal
+ zone event message
+
+On high CPU load (compiling the kernel), I see the thermal zone events
+triggered for zone 40 and 42. It does not trigger again once the CPU
+load went down again. Thus the events obviously do not notify a status
+change, but alert about high temperature.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+---
+ drivers/platform/arm64/lenovo-thinkpad-t14s.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/platform/arm64/lenovo-thinkpad-t14s.c b/drivers/platform/arm64/lenovo-thinkpad-t14s.c
+index e8a29ed8f..a37e193d9 100644
+--- a/drivers/platform/arm64/lenovo-thinkpad-t14s.c
++++ b/drivers/platform/arm64/lenovo-thinkpad-t14s.c
+@@ -527,13 +527,13 @@ static irqreturn_t t14s_ec_irq_handler(int irq, void *data)
+ 		dev_dbg(ec->dev, "LID closed\n");
+ 		break;
+ 	case T14S_EC_EVT_THERMAL_TZ40:
+-		dev_dbg(ec->dev, "Thermal Zone 40 Status Change Event (CPU/GPU)\n");
++		dev_dbg(ec->dev, "Thermal Zone 40 High Temperature Event (CPU/GPU)\n");
+ 		break;
+ 	case T14S_EC_EVT_THERMAL_TZ42:
+-		dev_dbg(ec->dev, "Thermal Zone 42 Status Change Event (Battery)\n");
++		dev_dbg(ec->dev, "Thermal Zone 42 High Temperature Event (Battery)\n");
+ 		break;
+ 	case T14S_EC_EVT_THERMAL_TZ39:
+-		dev_dbg(ec->dev, "Thermal Zone 39 Status Change Event (CPU/GPU)\n");
++		dev_dbg(ec->dev, "Thermal Zone 39 High Temperature Event (CPU/GPU)\n");
+ 		break;
+ 	case T14S_EC_EVT_KEY_FN_G:
+ 		dev_dbg(ec->dev, "FN + G - toggle double-tapping\n");
+-- 
+2.43.0
+

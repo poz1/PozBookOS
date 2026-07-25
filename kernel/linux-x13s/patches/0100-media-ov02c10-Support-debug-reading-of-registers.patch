@@ -1,0 +1,64 @@
+From bed804bb3e342c088846a42d209a2ac18dbd97c8 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sre@kernel.org>
+Date: Thu, 25 Sep 2025 03:23:49 +0200
+Subject: [PATCH 100/263] media: ov02c10: Support debug reading of registers
+
+Add support for debug reading registers, since there the regmap
+does not export anything to debugfs.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ drivers/media/i2c/ov02c10.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/media/i2c/ov02c10.c b/drivers/media/i2c/ov02c10.c
+index cf93d3603..6f385d741 100644
+--- a/drivers/media/i2c/ov02c10.c
++++ b/drivers/media/i2c/ov02c10.c
+@@ -764,6 +764,35 @@ static int ov02c10_init_state(struct v4l2_subdev *sd,
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_VIDEO_ADV_DEBUG
++static int ov02c10_get_register(struct v4l2_subdev *sd,
++				struct v4l2_dbg_register *reg)
++{
++	struct ov02c10 *ov02c10 = to_ov02c10(sd);
++	int ret;
++	u64 val;
++
++	if (reg->reg & ~0xffff)
++		return -EINVAL;
++
++	reg->size = 1;
++
++	ret = cci_read(ov02c10->regmap, CCI_REG8(reg->reg), &val, NULL);
++	if (ret)
++		return ret;
++
++	reg->val = (__u64)val;
++
++	return 0;
++}
++#endif
++
++static const struct v4l2_subdev_core_ops ov02c10_core_ops = {
++#ifdef CONFIG_VIDEO_ADV_DEBUG
++	.g_register = ov02c10_get_register,
++#endif
++};
++
+ static const struct v4l2_subdev_video_ops ov02c10_video_ops = {
+ 	.s_stream = v4l2_subdev_s_stream_helper,
+ };
+@@ -778,6 +807,7 @@ static const struct v4l2_subdev_pad_ops ov02c10_pad_ops = {
+ };
+ 
+ static const struct v4l2_subdev_ops ov02c10_subdev_ops = {
++	.core = &ov02c10_core_ops,
+ 	.video = &ov02c10_video_ops,
+ 	.pad = &ov02c10_pad_ops,
+ };
+-- 
+2.43.0
+

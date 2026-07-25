@@ -1,0 +1,49 @@
+From 375df6575669e473f945818e142a5d26a3e28e1a Mon Sep 17 00:00:00 2001
+From: Icenowy Zheng <zhengxingda@iscas.ac.cn>
+Date: Tue, 2 Jun 2026 16:14:48 +0800
+Subject: [PATCH 241/263] arm64: dts: qcom: sc8280xp-lenovo-thinkpad-x13s: set
+ GPI DMA channels
+
+It's found that some GPI interfaces shouldn't be touched by HLOS,
+otherwise system hang / reset happens.
+
+The GPI interface availability information is available via the ACPI
+DSDT table, as interrupt resources for \_SB_.QGP* devices.
+
+Add such information to the device tree file.
+
+The DSDT table is acquired at [1].
+
+[1] https://github.com/aarch64-laptops/build/blob/5e03e2900dee80877895342fa62f9a1badc785d8/misc/lenovo-thinkpad-x13s/dsdt.dsl
+
+Signed-off-by: Icenowy Zheng <zhengxingda@iscas.ac.cn>
+Link: https://lore.kernel.org/r/20260602081451.3808833-4-zhengxingda@iscas.ac.cn
+---
+ arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts b/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
+index 311097871..67bce4dd2 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
++++ b/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
+@@ -704,14 +704,17 @@ &dispcc0 {
+ };
+ 
+ &gpi_dma0 {
++	dma-channel-mask = <0x3>;
+ 	status = "okay";
+ };
+ 
+ &gpi_dma1 {
++	dma-channel-mask = <0x3>;
+ 	status = "okay";
+ };
+ 
+ &gpi_dma2 {
++	dma-channel-mask = <0x3>;
+ 	status = "okay";
+ };
+ 
+-- 
+2.43.0
+

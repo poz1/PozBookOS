@@ -1,0 +1,32 @@
+From 1add9b80ad24e942995aabcc15d1d161c4038f8d Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:05 +0530
+Subject: [PATCH 178/263] arm64: dts: qcom: qdu1000: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-29-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/qdu1000.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/qdu1000.dtsi b/arch/arm64/boot/dts/qcom/qdu1000.dtsi
+index cdfe40da5..4962c27d5 100644
+--- a/arch/arm64/boot/dts/qcom/qdu1000.dtsi
++++ b/arch/arm64/boot/dts/qcom/qdu1000.dtsi
+@@ -1054,7 +1054,7 @@ usb_1_dwc3_ss: endpoint {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,qdu1000-pdc", "qcom,pdc";
+-			reg = <0x0 0xb220000 0x0 0x30000>, <0x0 0x174000f0 0x0 0x64>;
++			reg = <0x0 0xb220000 0x0 0x10000>, <0x0 0x174000f0 0x0 0x64>;
+ 			qcom,pdc-ranges = <0 480 12>, <14 494 24>, <40 520 54>,
+ 					  <94 609 31>, <125 63 1>;
+ 			#interrupt-cells = <2>;
+-- 
+2.43.0
+

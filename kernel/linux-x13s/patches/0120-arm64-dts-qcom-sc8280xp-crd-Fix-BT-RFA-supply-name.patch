@@ -1,0 +1,32 @@
+From e44feb84f5220d3ea54c4aa6cf7f3cb21ca2cd09 Mon Sep 17 00:00:00 2001
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Date: Mon, 19 Jan 2026 12:42:25 +0100
+Subject: [PATCH 120/263] arm64: dts: qcom: sc8280xp-crd: Fix BT RFA supply
+ name
+
+Fix up the supply name to align with bindings.
+
+Reviewed-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+Reviewed-by: Bartosz Golaszewski <bartosz.golaszewski@oss.qualcomm.com>
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260119-topic-wcn6855_pmu_dtbdings-v2-3-6d1c75608bbb@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp-crd.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp-crd.dts b/arch/arm64/boot/dts/qcom/sc8280xp-crd.dts
+index c53e00cae..dcdeefd28 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp-crd.dts
++++ b/arch/arm64/boot/dts/qcom/sc8280xp-crd.dts
+@@ -787,7 +787,7 @@ bluetooth {
+ 		vddbtcmx-supply = <&vreg_pmu_btcmx_0p8>;
+ 		vddrfa0p8-supply = <&vreg_pmu_rfa_0p8>;
+ 		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
+-		vddrfa1p8-supply = <&vreg_pmu_rfa_1p7>;
++		vddrfa1p7-supply = <&vreg_pmu_rfa_1p7>;
+ 	};
+ };
+ 
+-- 
+2.43.0
+

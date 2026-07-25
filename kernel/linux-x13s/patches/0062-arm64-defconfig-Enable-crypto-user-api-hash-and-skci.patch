@@ -1,0 +1,62 @@
+From 119219c5af2148ac7464fdf29d3c007b0fc2b2f6 Mon Sep 17 00:00:00 2001
+From: Abel Vesa <abel.vesa@linaro.org>
+Date: Fri, 8 Aug 2025 21:07:53 +0000
+Subject: [PATCH 062/263] arm64: defconfig: Enable crypto user api hash and
+ skcipher
+
+Without these, iwd fails to start:
+
+iwd[1670]: No HMAC(SHA1) support found
+iwd[1670]: No HMAC(MD5) support found
+iwd[1670]: No CMAC(AES) support found
+iwd[1670]: No HMAC(SHA256) support not found
+iwd[1670]: No HMAC(SHA512) support found, certain TLS connections might fail
+iwd[1670]: DES support not found
+iwd[1670]: AES support not found
+iwd[1670]: No CBC(DES3_EDE) support found, certain TLS connections might fail
+iwd[1670]: No CBC(AES) support found, WPS will not be available
+iwd[1670]: No Diffie-Hellman support found, WPS will not be available
+iwd[1670]: The following options are missing in the kernel:
+iwd[1670]:         CONFIG_CRYPTO_USER_API_HASH
+iwd[1670]:         CONFIG_CRYPTO_USER_API_SKCIPHER
+iwd[1670]:         CONFIG_KEY_DH_OPERATIONS
+iwd[1670]:         CONFIG_CRYPTO_ECB
+iwd[1670]:         CONFIG_CRYPTO_MD5
+iwd[1670]:         CONFIG_CRYPTO_CBC
+iwd[1670]:         CONFIG_CRYPTO_SHA256
+iwd[1670]:         CONFIG_CRYPTO_AES
+iwd[1670]:         CONFIG_CRYPTO_DES
+iwd[1670]:         CONFIG_CRYPTO_CMAC
+iwd[1670]:         CONFIG_CRYPTO_HMAC
+iwd[1670]:         CONFIG_CRYPTO_SHA512
+iwd[1670]:         CONFIG_CRYPTO_SHA1
+iwd[1670]: The following optimized implementations might be available:
+iwd[1670]:         CONFIG_CRYPTO_SHA1_SSSE3
+iwd[1670]:         CONFIG_CRYPTO_AES_NI_INTEL
+iwd[1670]:         CONFIG_CRYPTO_SHA512_SSSE3
+iwd[1670]:         CONFIG_CRYPTO_AES_X86_64
+iwd[1670]:         CONFIG_CRYPTO_DES3_EDE_X86_64
+iwd[1670]:         CONFIG_CRYPTO_SHA256_SSSE3
+
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 91f3226d9..16bf789f2 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1925,6 +1925,8 @@ CONFIG_CRYPTO_ECHAINIV=y
+ CONFIG_CRYPTO_MICHAEL_MIC=m
+ CONFIG_CRYPTO_SHA3=m
+ CONFIG_CRYPTO_USER_API_RNG=m
++CONFIG_CRYPTO_USER_API_HASH=m
++CONFIG_CRYPTO_USER_API_SKCIPHER=m
+ CONFIG_CRYPTO_GHASH_ARM64_CE=y
+ CONFIG_CRYPTO_SM3_ARM64_CE=m
+ CONFIG_CRYPTO_AES_ARM64_CE_BLK=y
+-- 
+2.43.0
+

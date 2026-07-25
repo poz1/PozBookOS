@@ -1,0 +1,37 @@
+From db95b58165f83f8fef5e0ed8b0c3ea3fe27ccb7e Mon Sep 17 00:00:00 2001
+From: Ajay Kumar Nandam <ajay.nandam@oss.qualcomm.com>
+Date: Mon, 13 Apr 2026 17:48:24 +0530
+Subject: [PATCH 186/263] ASoC: codecs: lpass-wsa-macro: Guard optional NPL
+ clock rate programming
+
+The NPL clock is only present on some platforms.  When it is absent,
+wsa->npl remains NULL, but the driver unconditionally programs its rate.
+
+Guard clk_set_rate() for the NPL clock so platforms without NPL do not
+attempt to access it.
+
+No functional change on platforms that provide the NPL clock.
+
+Signed-off-by: Ajay Kumar Nandam <ajay.nandam@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260413121824.375473-4-ajay.nandam@oss.qualcomm.com
+---
+ sound/soc/codecs/lpass-wsa-macro.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/sound/soc/codecs/lpass-wsa-macro.c b/sound/soc/codecs/lpass-wsa-macro.c
+index 6aa6c4d95..8c8c50a63 100644
+--- a/sound/soc/codecs/lpass-wsa-macro.c
++++ b/sound/soc/codecs/lpass-wsa-macro.c
+@@ -2774,7 +2774,8 @@ static int wsa_macro_probe(struct platform_device *pdev)
+ 
+ 	/* set MCLK and NPL rates */
+ 	clk_set_rate(wsa->mclk, WSA_MACRO_MCLK_FREQ);
+-	clk_set_rate(wsa->npl, WSA_MACRO_MCLK_FREQ);
++	if (wsa->npl)
++		clk_set_rate(wsa->npl, WSA_MACRO_MCLK_FREQ);
+ 
+ 	ret = devm_pm_clk_create(dev);
+ 	if (ret)
+-- 
+2.43.0
+

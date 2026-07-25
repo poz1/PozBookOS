@@ -1,0 +1,113 @@
+From 26dbe9414efc5f3eb584d0bfa4da1881d4bda182 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Mon, 25 Aug 2025 23:14:38 +0530
+Subject: [PATCH 003/263] PCI/ASPM: Transition the device to D0 (if required)
+ inside pci_enable_link_state_locked() API
+
+Both of the current callers of the pci_enable_link_state_locked() API
+transition the device to D0 before calling. This aligns with the PCIe spec
+r6.0, sec 5.5.4:
+
+"If setting either or both of the enable bits for PCI-PM L1 PM Substates,
+both ports must be configured as described in this section while in D0."
+
+But it looks redundant to let the callers transition the device to D0. So
+move the logic inside the API and perform D0 transition only if the PCI-PM
+L1 Substates are getting enabled.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://patch.msgid.link/20250825-ath-aspm-fix-v2-3-61b2f2db7d89@oss.qualcomm.com
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/pci/controller/dwc/pcie-qcom.c |  5 -----
+ drivers/pci/controller/vmd.c           |  5 -----
+ drivers/pci/pcie/aspm.c                | 22 ++++++++++++++++++----
+ 3 files changed, 18 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 9fdfc88ac..0f714d53f 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -1049,11 +1049,6 @@ static int qcom_pcie_post_init_2_7_0(struct qcom_pcie *pcie)
+ 
+ static int qcom_pcie_enable_aspm(struct pci_dev *pdev, void *userdata)
+ {
+-	/*
+-	 * Downstream devices need to be in D0 state before enabling PCI PM
+-	 * substates.
+-	 */
+-	pci_set_power_state_locked(pdev, PCI_D0);
+ 	pci_enable_link_state_locked(pdev, PCIE_LINK_STATE_ALL);
+ 
+ 	return 0;
+diff --git a/drivers/pci/controller/vmd.c b/drivers/pci/controller/vmd.c
+index d4ae250d4..20597d2cf 100644
+--- a/drivers/pci/controller/vmd.c
++++ b/drivers/pci/controller/vmd.c
+@@ -762,11 +762,6 @@ static int vmd_pm_enable_quirk(struct pci_dev *pdev, void *userdata)
+ 	pci_info(pdev, "VMD: Default LTR value set by driver\n");
+ 
+ out_state_change:
+-	/*
+-	 * Ensure devices are in D0 before enabling PCI-PM L1 PM Substates, per
+-	 * PCIe r6.0, sec 5.5.4.
+-	 */
+-	pci_set_power_state_locked(pdev, PCI_D0);
+ 	pci_enable_link_state_locked(pdev, PCIE_LINK_STATE_ALL);
+ 	return 0;
+ }
+diff --git a/drivers/pci/pcie/aspm.c b/drivers/pci/pcie/aspm.c
+index 9734b2b77..cdc38e20c 100644
+--- a/drivers/pci/pcie/aspm.c
++++ b/drivers/pci/pcie/aspm.c
+@@ -1508,13 +1508,20 @@ static int __pci_enable_link_state(struct pci_dev *pdev, int state, bool locked)
+  * Note that if the BIOS didn't grant ASPM control to the OS, this does
+  * nothing because we can't touch the LNKCTL register.
+  *
+- * Note: Ensure devices are in D0 before enabling PCI-PM L1 PM Substates, per
+- * PCIe r6.0, sec 5.5.4.
++ * Note: The device will be transitioned to D0 state if the PCI-PM L1 Substates
++ * are getting enabled.
+  *
+  * Return: 0 on success, a negative errno otherwise.
+  */
+ int pci_enable_link_state(struct pci_dev *pdev, int state)
+ {
++	/*
++	 * Ensure the device is in D0 before enabling PCI-PM L1 PM Substates, per
++	 * PCIe r6.0, sec 5.5.4.
++	 */
++	if (FIELD_GET(PCIE_LINK_STATE_L1_SS_PCIPM, state))
++		pci_set_power_state(pdev, PCI_D0);
++
+ 	return __pci_enable_link_state(pdev, state, false);
+ }
+ EXPORT_SYMBOL(pci_enable_link_state);
+@@ -1528,8 +1535,8 @@ EXPORT_SYMBOL(pci_enable_link_state);
+  * Note that if the BIOS didn't grant ASPM control to the OS, this does
+  * nothing because we can't touch the LNKCTL register.
+  *
+- * Note: Ensure devices are in D0 before enabling PCI-PM L1 PM Substates, per
+- * PCIe r6.0, sec 5.5.4.
++ * Note: The device will be transitioned to D0 state if the PCI-PM L1 Substates
++ * are getting enabled.
+  *
+  * Context: Caller holds pci_bus_sem read lock.
+  *
+@@ -1539,6 +1546,13 @@ int pci_enable_link_state_locked(struct pci_dev *pdev, int state)
+ {
+ 	lockdep_assert_held_read(&pci_bus_sem);
+ 
++	/*
++	 * Ensure the device is in D0 before enabling PCI-PM L1 PM Substates, per
++	 * PCIe r6.0, sec 5.5.4.
++	 */
++	if (FIELD_GET(PCIE_LINK_STATE_L1_SS_PCIPM, state))
++		pci_set_power_state(pdev, PCI_D0);
++
+ 	return __pci_enable_link_state(pdev, state, true);
+ }
+ EXPORT_SYMBOL(pci_enable_link_state_locked);
+-- 
+2.43.0
+

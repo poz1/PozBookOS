@@ -1,0 +1,65 @@
+From 871a3cdff0b50109ca9b331ddb93c5db8dbc3d97 Mon Sep 17 00:00:00 2001
+From: Johan Hovold <johan+linaro@kernel.org>
+Date: Mon, 7 Apr 2025 15:51:47 +0200
+Subject: [PATCH 030/263] hack: media: qcom: camss: fix sensor pad null-deref
+ at boot
+
+Due to an unresolved bug in camss (or v4l2), user space can access the
+camera device before things have been fully set up.
+
+This specifically results in a NULL pointer dereference in
+camss_find_sensor_pad() when udev tries to identify the v4l2 device
+during boot (and this in turn prevents the display from being probed).
+
+    Unable to handle kernel NULL pointer dereference at virtual address 0000000000000030
+
+    CPU: 3 UID: 0 PID: 442 Comm: v4l_id Not tainted 6.15.0-rc1 #106 PREEMPT
+
+    Hardware name: LENOVO 21BYZ9SRUS/21BYZ9SRUS, BIOS N3HET87W (1.59 ) 12/05/2023
+
+    Call trace:
+     camss_find_sensor_pad+0x20/0x74 [qcom_camss] (P)
+     camss_get_pixel_clock+0x18/0x64 [qcom_camss]
+     vfe_get+0xb8/0x504 [qcom_camss]
+     vfe_set_power+0x30/0x58 [qcom_camss]
+     pipeline_pm_power_one+0x13c/0x150 [videodev]
+     pipeline_pm_power.part.0+0x58/0xf4 [videodev]
+     v4l2_pipeline_pm_use+0x58/0x94 [videodev]
+     v4l2_pipeline_pm_get+0x14/0x20 [videodev]
+     video_open+0x78/0xf4 [qcom_camss]
+     v4l2_open+0x80/0x120 [videodev]
+
+Work around the bug by bailing out if camss_find_sensor_pad() is called
+for an uninitialised media entity to allow machines like the Lenovo
+ThinkPad X13s to boot.
+
+Link: https://lore.kernel.org/lkml/Z_PXzvL5Zt9QkivE@hovoldconsulting.com/
+Signed-off-by: Johan Hovold <johan+linaro@kernel.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/media/platform/qcom/camss/camss.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/camss/camss.c b/drivers/media/platform/qcom/camss/camss.c
+index 6b1fe8ec3..1ba08f96c 100644
+--- a/drivers/media/platform/qcom/camss/camss.c
++++ b/drivers/media/platform/qcom/camss/camss.c
+@@ -4226,6 +4226,14 @@ struct media_pad *camss_find_sensor_pad(struct media_entity *entity)
+ 
+ 	while (1) {
+ 		pad = &entity->pads[0];
++
++		/*
++		 * Work around unresolved bug in camss (or v4l2) which can
++		 * result in pad being NULL here.
++		 */
++		if (WARN_ON(!pad))
++			return NULL;
++
+ 		if (!(pad->flags & MEDIA_PAD_FL_SINK))
+ 			return NULL;
+ 
+-- 
+2.43.0
+

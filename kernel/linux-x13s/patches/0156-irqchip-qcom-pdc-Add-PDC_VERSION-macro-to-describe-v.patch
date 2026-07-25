@@ -1,0 +1,55 @@
+From e36e329c5e67027ea889cc0b73e5c51bf5d844ec Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:42 +0530
+Subject: [PATCH 156/263] irqchip/qcom-pdc: Add PDC_VERSION() macro to describe
+ version register fields
+
+The PDC hardware version register encodes major, minor and step fields
+in byte-sized fields at bits [23:16], [15:8] and [7:0] respectively.
+The existing PDC_VERSION_3_2 constant was a bare magic number (0x30200)
+with no indication of this encoding.
+
+Add GENMASK-based field definitions for each sub-field and a
+PDC_VERSION(maj, min, step) constructor macro using FIELD_PREP, making
+the encoding self-documenting. Replace the magic constant with
+PDC_VERSION(3, 2, 0).
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-6-mukesh.ojha@oss.qualcomm.com
+---
+ drivers/irqchip/qcom-pdc.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/irqchip/qcom-pdc.c b/drivers/irqchip/qcom-pdc.c
+index 734576cdc..5e1553334 100644
+--- a/drivers/irqchip/qcom-pdc.c
++++ b/drivers/irqchip/qcom-pdc.c
+@@ -3,6 +3,7 @@
+  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+  */
+ 
++#include <linux/bitfield.h>
+ #include <linux/err.h>
+ #include <linux/init.h>
+ #include <linux/interrupt.h>
+@@ -34,9 +35,16 @@
+ #define IRQ_i_CFG_TYPE_MASK	GENMASK(2, 0)
+ 
+ #define PDC_VERSION_REG		0x1000
++#define PDC_VERSION_MAJOR	GENMASK(23, 16)
++#define PDC_VERSION_MINOR	GENMASK(15, 8)
++#define PDC_VERSION_STEP	GENMASK(7, 0)
++#define PDC_VERSION(maj, min, step)	\
++	(FIELD_PREP(PDC_VERSION_MAJOR, (maj)) | \
++	 FIELD_PREP(PDC_VERSION_MINOR, (min)) | \
++	 FIELD_PREP(PDC_VERSION_STEP,  (step)))
+ 
+ /* Notable PDC versions */
+-#define PDC_VERSION_3_2		0x30200
++#define PDC_VERSION_3_2		PDC_VERSION(3, 2, 0)
+ 
+ struct pdc_pin_region {
+ 	u32 pin_base;
+-- 
+2.43.0
+

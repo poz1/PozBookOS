@@ -1,0 +1,33 @@
+From 8f2c3821a5914c8e48da2fa856ca9cea288c59d8 Mon Sep 17 00:00:00 2001
+From: Abel Vesa <abel.vesa@linaro.org>
+Date: Tue, 21 Oct 2025 16:50:44 +0300
+Subject: [PATCH 032/263] ASoC: dt-bindings: qcom,sm8250: Add Dell XPS13 9345
+ sound card
+
+The Dell XPS13 9345 maps the speakers and tweeters starting from
+the right side instead of left, which means we need to handle it
+differently then the rest of the X Elite platforms.
+
+So document its new compatible.
+
+Link: https://patch.msgid.link/20251021-dell-xps13-9345-enable-audio-v1-1-6f3f6bbd977b@linaro.org
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ Documentation/devicetree/bindings/sound/qcom,sm8250.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/qcom,sm8250.yaml b/Documentation/devicetree/bindings/sound/qcom,sm8250.yaml
+index 15f38622b..02b7ed100 100644
+--- a/Documentation/devicetree/bindings/sound/qcom,sm8250.yaml
++++ b/Documentation/devicetree/bindings/sound/qcom,sm8250.yaml
+@@ -29,6 +29,7 @@ properties:
+               - qcom,sm8750-sndcard
+           - const: qcom,sm8450-sndcard
+       - enum:
++          - dell,xps13-9345-sndcard
+           - fairphone,fp4-sndcard
+           - fairphone,fp5-sndcard
+           - qcom,apq8096-sndcard
+-- 
+2.43.0
+

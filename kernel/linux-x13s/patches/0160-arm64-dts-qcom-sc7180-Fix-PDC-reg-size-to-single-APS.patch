@@ -1,0 +1,32 @@
+From d59e294b1f3f6a9275ee1d7235ac041b2ffe30a0 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:46 +0530
+Subject: [PATCH 160/263] arm64: dts: qcom: sc7180: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-10-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sc7180.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc7180.dtsi b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+index 45b9864e3..52bc7d1ae 100644
+--- a/arch/arm64/boot/dts/qcom/sc7180.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+@@ -3505,7 +3505,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sc7180-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x30000>;
++			reg = <0 0x0b220000 0 0x10000>;
+ 			qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>;
+ 			#interrupt-cells = <2>;
+ 			interrupt-parent = <&intc>;
+-- 
+2.43.0
+

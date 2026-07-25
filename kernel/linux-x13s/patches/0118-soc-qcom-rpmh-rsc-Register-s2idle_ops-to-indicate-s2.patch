@@ -1,0 +1,75 @@
+From 8e8b9b957bd6fe86c18d8ea9d92ca8dabb244eb6 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Thu, 1 Jan 2026 22:21:58 +0530
+Subject: [PATCH 118/263] soc: qcom: rpmh-rsc: Register s2idle_ops to indicate
+ s2ram behavior in s2idle
+
+RPMh in some Qcom SoCs like Makena (SC8280XP) implement deeper low power
+state similar to that of Suspend to RAM (S2RAM) despite PSCI firmware only
+supporting s2idle. So the OS never knows the platform will be transitioning
+to deeper low power state and the device drivers do not prepare for the
+possible power loss during system suspend.
+
+So register the s2idle_ops for this platform and invoke
+pm_set_{suspend/resume}_via_firmware() APIs in the callbacks to let the
+drivers know that the firmware is going to get involved in the suspend
+process and they need to be prepared for that by taking actions such as
+shutting down or resetting the devices.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260101165158.7251-2-manivannan.sadhasivam@oss.qualcomm.com
+---
+ drivers/soc/qcom/rpmh-rsc.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/drivers/soc/qcom/rpmh-rsc.c b/drivers/soc/qcom/rpmh-rsc.c
+index c6f7d5c9c..a7a03b50c 100644
+--- a/drivers/soc/qcom/rpmh-rsc.c
++++ b/drivers/soc/qcom/rpmh-rsc.c
+@@ -25,6 +25,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
++#include <linux/suspend.h>
+ #include <linux/wait.h>
+ 
+ #include <clocksource/arm_arch_timer.h>
+@@ -1028,6 +1029,25 @@ static int rpmh_probe_tcs_config(struct platform_device *pdev, struct rsc_drv *d
+ 	return 0;
+ }
+ 
++static int rpmh_rsc_s2idle_begin(void)
++{
++	pm_set_suspend_via_firmware();
++
++	return 0;
++}
++
++static int rpmh_rsc_s2idle_prepare_late(void)
++{
++	pm_set_resume_via_firmware();
++
++	return 0;
++}
++
++static const struct platform_s2idle_ops rpmh_rsc_s2idle_ops = {
++	.begin = rpmh_rsc_s2idle_begin,
++	.prepare_late = rpmh_rsc_s2idle_prepare_late,
++};
++
+ static int rpmh_rsc_probe(struct platform_device *pdev)
+ {
+ 	struct device_node *dn = pdev->dev.of_node;
+@@ -1122,6 +1142,9 @@ static int rpmh_rsc_probe(struct platform_device *pdev)
+ 	dev_set_drvdata(&pdev->dev, drv);
+ 	drv->dev = &pdev->dev;
+ 
++	if (of_machine_is_compatible("qcom,sc8280xp"))
++		s2idle_set_ops(&rpmh_rsc_s2idle_ops);
++
+ 	ret = devm_of_platform_populate(&pdev->dev);
+ 	if (ret && pdev->dev.pm_domain) {
+ 		dev_pm_genpd_remove_notifier(&pdev->dev);
+-- 
+2.43.0
+

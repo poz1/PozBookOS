@@ -1,0 +1,35 @@
+From 90adb14cba29f48e15647c2902f209b46f0e7283 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sebastian.reichel@collabora.com>
+Date: Sat, 21 Mar 2026 23:56:56 +0100
+Subject: [PATCH 111/263] arm64: dts: qcom: x1e80100-t14s: Improve reserved
+ ranges documentation
+
+Improve documentation of the reserved GPIOs.
+
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+---
+ .../boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi      | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+index 02c474bfa..fce486dd1 100644
+--- a/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
++++ b/arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi
+@@ -1682,10 +1682,10 @@ wcd_tx: codec@0,3 {
+ };
+ 
+ &tlmm {
+-	gpio-reserved-ranges = <34 2>, /* Unused */
+-			       <44 4>, /* SPI (TPM) */
+-			       <72 2>, /* Secure EC I2C connection (?) */
+-			       <238 1>; /* UFS Reset */
++	gpio-reserved-ranges = <34 2>, /* GPIO34 = unused, GPIO35 = TPM interrupt */
++			       <44 4>, /* SPI11 (Nuvoton NPCT760 TPM) */
++			       <72 2>, /* I2C18 (Secure EC I2C connection) */
++			       <238 1>; /* UFS Reset (unused) */
+ 
+ 	ec_int_n_default: ec-int-n-state {
+ 		pins = "gpio66";
+-- 
+2.43.0
+

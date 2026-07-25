@@ -1,0 +1,32 @@
+From 39d4629353eff28d9c94b5df7cf382a2fd077726 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:55 +0530
+Subject: [PATCH 169/263] arm64: dts: qcom: sm8650: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-19-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sm8650.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm8650.dtsi b/arch/arm64/boot/dts/qcom/sm8650.dtsi
+index 64a748029..c0878da73 100644
+--- a/arch/arm64/boot/dts/qcom/sm8650.dtsi
++++ b/arch/arm64/boot/dts/qcom/sm8650.dtsi
+@@ -5984,7 +5984,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sm8650-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x30000>, <0 0x174000f0 0 0x64>;
++			reg = <0 0x0b220000 0 0x10000>, <0 0x174000f0 0 0x64>;
+ 
+ 			interrupt-parent = <&intc>;
+ 
+-- 
+2.43.0
+

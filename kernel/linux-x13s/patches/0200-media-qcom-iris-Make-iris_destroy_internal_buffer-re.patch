@@ -1,0 +1,120 @@
+From 408e59c56cfc9aac242eae22c515e52947762aa5 Mon Sep 17 00:00:00 2001
+From: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Date: Wed, 22 Apr 2026 16:46:40 +0530
+Subject: [PATCH 200/263] media: qcom: iris: Make
+ iris_destroy_internal_buffer() return void
+
+iris_destroy_internal_buffer() is guaranteed to succeed and never
+reports an error. Returning an int is misleading and forces callers to
+handle a meaningless status value. Convert it to return void to match
+its behavior and simplify callers.
+
+Signed-off-by: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260422-iris-code-improvement-v1-7-8e150482212d@oss.qualcomm.com
+---
+ drivers/media/platform/qcom/iris/iris_buffer.c   | 16 ++++------------
+ drivers/media/platform/qcom/iris/iris_buffer.h   |  2 +-
+ .../platform/qcom/iris/iris_hfi_gen1_command.c   |  2 +-
+ .../platform/qcom/iris/iris_hfi_gen2_response.c  |  4 +++-
+ 4 files changed, 9 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_buffer.c b/drivers/media/platform/qcom/iris/iris_buffer.c
+index 453a324c1..f98827187 100644
+--- a/drivers/media/platform/qcom/iris/iris_buffer.c
++++ b/drivers/media/platform/qcom/iris/iris_buffer.c
+@@ -534,7 +534,7 @@ int iris_queue_internal_buffers(struct iris_inst *inst, u32 plane)
+ 	return 0;
+ }
+ 
+-int iris_destroy_internal_buffer(struct iris_inst *inst, struct iris_buffer *buffer)
++void iris_destroy_internal_buffer(struct iris_inst *inst, struct iris_buffer *buffer)
+ {
+ 	struct iris_core *core = inst->core;
+ 
+@@ -542,8 +542,6 @@ int iris_destroy_internal_buffer(struct iris_inst *inst, struct iris_buffer *buf
+ 	dma_free_attrs(core->dev, buffer->buffer_size, buffer->kvaddr,
+ 		       buffer->device_addr, buffer->dma_attrs);
+ 	kfree(buffer);
+-
+-	return 0;
+ }
+ 
+ static int iris_destroy_internal_buffers(struct iris_inst *inst, u32 plane, bool force)
+@@ -552,7 +550,6 @@ static int iris_destroy_internal_buffers(struct iris_inst *inst, u32 plane, bool
+ 	struct iris_buffers *buffers;
+ 	const u32 *internal_buf_type;
+ 	u32 i, len;
+-	int ret;
+ 
+ 	iris_get_int_buf_tbl(inst, plane, &internal_buf_type, &len);
+ 
+@@ -567,9 +564,7 @@ static int iris_destroy_internal_buffers(struct iris_inst *inst, u32 plane, bool
+ 			if (!force && buf->attr & BUF_ATTR_QUEUED)
+ 				continue;
+ 
+-			ret = iris_destroy_internal_buffer(inst, buf);
+-			if (ret)
+-				return ret;
++			iris_destroy_internal_buffer(inst, buf);
+ 		}
+ 	}
+ 
+@@ -579,11 +574,8 @@ static int iris_destroy_internal_buffers(struct iris_inst *inst, u32 plane, bool
+ 		else
+ 			buffers = &inst->buffers[BUF_ARP];
+ 
+-		list_for_each_entry_safe(buf, next, &buffers->list, list) {
+-			ret = iris_destroy_internal_buffer(inst, buf);
+-			if (ret)
+-				return ret;
+-		}
++		list_for_each_entry_safe(buf, next, &buffers->list, list)
++			iris_destroy_internal_buffer(inst, buf);
+ 	}
+ 
+ 	return 0;
+diff --git a/drivers/media/platform/qcom/iris/iris_buffer.h b/drivers/media/platform/qcom/iris/iris_buffer.h
+index 75bb76776..ab8e5d953 100644
+--- a/drivers/media/platform/qcom/iris/iris_buffer.h
++++ b/drivers/media/platform/qcom/iris/iris_buffer.h
+@@ -112,7 +112,7 @@ void iris_get_internal_buffers(struct iris_inst *inst, u32 plane);
+ int iris_create_internal_buffers(struct iris_inst *inst, u32 plane);
+ int iris_queue_internal_buffers(struct iris_inst *inst, u32 plane);
+ int iris_queue_internal_deferred_buffers(struct iris_inst *inst, enum iris_buffer_type buffer_type);
+-int iris_destroy_internal_buffer(struct iris_inst *inst, struct iris_buffer *buffer);
++void iris_destroy_internal_buffer(struct iris_inst *inst, struct iris_buffer *buffer);
+ int iris_destroy_all_internal_buffers(struct iris_inst *inst, u32 plane);
+ int iris_destroy_dequeued_internal_buffers(struct iris_inst *inst, u32 plane);
+ int iris_alloc_and_queue_persist_bufs(struct iris_inst *inst, enum iris_buffer_type buf_type);
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_gen1_command.c b/drivers/media/platform/qcom/iris/iris_hfi_gen1_command.c
+index 3779fe504..b1e8fe439 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen1_command.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen1_command.c
+@@ -442,7 +442,7 @@ static int iris_hfi_gen1_session_unset_buffers(struct iris_inst *inst, struct ir
+ 
+ 	ret = iris_wait_for_session_response(inst, false);
+ 	if (!ret)
+-		ret = iris_destroy_internal_buffer(inst, buf);
++		iris_destroy_internal_buffer(inst, buf);
+ 
+ exit:
+ 	kfree(pkt);
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_gen2_response.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2_response.c
+index 85ad43628..94b3958bc 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_response.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_response.c
+@@ -447,7 +447,9 @@ static int iris_hfi_gen2_handle_release_internal_buffer(struct iris_inst *inst,
+ 
+ 	buf->attr &= ~BUF_ATTR_QUEUED;
+ 
+-	return iris_destroy_internal_buffer(inst, buf);
++	iris_destroy_internal_buffer(inst, buf);
++
++	return 0;
+ }
+ 
+ static int iris_hfi_gen2_handle_session_stop(struct iris_inst *inst,
+-- 
+2.43.0
+

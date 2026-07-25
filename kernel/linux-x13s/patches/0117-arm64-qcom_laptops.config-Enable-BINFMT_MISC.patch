@@ -1,0 +1,25 @@
+From 5a31b328fd070a9d702b65cd0f6ebf078be4b79b Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Mon, 22 Dec 2025 03:19:35 -0600
+Subject: [PATCH 117/263] arm64: qcom_laptops.config: Enable BINFMT_MISC
+
+QEMU requires this option in order to run binaries for other
+architectures, enable it.
+---
+ arch/arm64/configs/qcom_laptops.config | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index ffde3784f..d20d01360 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -119,3 +119,6 @@ CONFIG_BPF_LSM=y
+ CONFIG_DEBUG_INFO_SPLIT=n
+ CONFIG_DEBUG_INFO_REDUCED=n
+ CONFIG_DEBUG_INFO_BTF=y
++
++# Enable binfmt-misc
++CONFIG_BINFMT_MISC=m
+-- 
+2.43.0
+

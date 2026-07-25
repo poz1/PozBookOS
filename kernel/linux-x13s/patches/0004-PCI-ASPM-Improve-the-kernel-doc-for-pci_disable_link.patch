@@ -1,0 +1,41 @@
+From db2617f2c6e5367a7ecbcaa6a8c7b12c4d252d9a Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Mon, 25 Aug 2025 23:14:39 +0530
+Subject: [PATCH 004/263] PCI/ASPM: Improve the kernel-doc for
+ pci_disable_link_state*() APIs
+
+Add kernel-doc for pci_disable_link_state_locked() API and fix the
+kernel-doc for pci_disable_link_state() API.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Link: https://patch.msgid.link/20250825-ath-aspm-fix-v2-4-61b2f2db7d89@oss.qualcomm.com
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ drivers/pci/pcie/aspm.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/pci/pcie/aspm.c b/drivers/pci/pcie/aspm.c
+index cdc38e20c..5b6a58b5f 100644
+--- a/drivers/pci/pcie/aspm.c
++++ b/drivers/pci/pcie/aspm.c
+@@ -1443,6 +1443,17 @@ static int __pci_disable_link_state(struct pci_dev *pdev, int state, bool locked
+ 	return 0;
+ }
+ 
++/**
++ * pci_disable_link_state_locked - Disable device's link state
++ * @pdev: PCI device
++ * @state: ASPM link state to disable
++ *
++ * Disable device's link state so the link will never enter specific states.
++ *
++ * Context: Caller holds pci_bus_sem read lock.
++ *
++ * Return: 0 on success, a negative errno otherwise.
++ */
+ int pci_disable_link_state_locked(struct pci_dev *pdev, int state)
+ {
+ 	lockdep_assert_held_read(&pci_bus_sem);
+-- 
+2.43.0
+

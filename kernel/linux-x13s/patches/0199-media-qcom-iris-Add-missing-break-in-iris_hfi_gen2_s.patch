@@ -1,0 +1,32 @@
+From 8c446c5e9a3a363423821d7ba5fc948ced01f78c Mon Sep 17 00:00:00 2001
+From: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Date: Wed, 22 Apr 2026 16:46:39 +0530
+Subject: [PATCH 199/263] media: qcom: iris: Add missing break in
+ iris_hfi_gen2_session_set_codec()
+
+Without the break the AV1 case falls through, risking unintended behaviour
+if new cases are added after it.
+
+Fixes: 2af481a459a4 ("media: iris: Define AV1-specific platform capabilities and properties")
+Signed-off-by: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260422-iris-code-improvement-v1-6-8e150482212d@oss.qualcomm.com
+---
+ drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+index bbcb84f8b..5449e6bb2 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+@@ -761,6 +761,7 @@ static int iris_hfi_gen2_session_set_codec(struct iris_inst *inst)
+ 		break;
+ 	case V4L2_PIX_FMT_AV1:
+ 		codec = HFI_CODEC_DECODE_AV1;
++		break;
+ 	}
+ 
+ 	iris_hfi_gen2_packet_session_property(inst,
+-- 
+2.43.0
+

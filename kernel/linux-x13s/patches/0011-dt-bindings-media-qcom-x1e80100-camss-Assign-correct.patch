@@ -1,0 +1,77 @@
+From 6b0420d83214708025cdf13dffc512a9ed063840 Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Fri, 11 Jul 2025 13:57:53 +0100
+Subject: [PATCH 011/263] dt-bindings: media: qcom,x1e80100-camss: Assign
+ correct main register bank to first address
+
+The first register bank should be the 'main' register bank, in this case
+the CSID wrapper register is responsible for muxing PHY/TPG inputs directly
+to CSID or to other blocks such as the Sensor Front End.
+
+commit f4792eeaa971 ("dt-bindings: media: qcom,x1e80100-camss: Fix isp unit address")
+assigned the address to the first register bank "csid0" whereas what we
+should have done is retained the unit address and moved csid_wrapper to be
+the first listed bank.
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Link: https://patch.msgid.link/20250711-b4-linux-next-25-03-13-dtsi-x1e80100-camss-v7-1-0bc5da82f526@linaro.org
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ .../bindings/media/qcom,x1e80100-camss.yaml          | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/media/qcom,x1e80100-camss.yaml b/Documentation/devicetree/bindings/media/qcom,x1e80100-camss.yaml
+index 2d1662ef5..9aaed897f 100644
+--- a/Documentation/devicetree/bindings/media/qcom,x1e80100-camss.yaml
++++ b/Documentation/devicetree/bindings/media/qcom,x1e80100-camss.yaml
+@@ -21,12 +21,12 @@ properties:
+ 
+   reg-names:
+     items:
++      - const: csid_wrapper
+       - const: csid0
+       - const: csid1
+       - const: csid2
+       - const: csid_lite0
+       - const: csid_lite1
+-      - const: csid_wrapper
+       - const: csiphy0
+       - const: csiphy1
+       - const: csiphy2
+@@ -190,15 +190,15 @@ examples:
+         #address-cells = <2>;
+         #size-cells = <2>;
+ 
+-        camss: isp@acb7000 {
++        camss: isp@acb6000 {
+             compatible = "qcom,x1e80100-camss";
+ 
+-            reg = <0 0x0acb7000 0 0x2000>,
++            reg = <0 0x0acb6000 0 0x1000>,
++                  <0 0x0acb7000 0 0x2000>,
+                   <0 0x0acb9000 0 0x2000>,
+                   <0 0x0acbb000 0 0x2000>,
+                   <0 0x0acc6000 0 0x1000>,
+                   <0 0x0acca000 0 0x1000>,
+-                  <0 0x0acb6000 0 0x1000>,
+                   <0 0x0ace4000 0 0x1000>,
+                   <0 0x0ace6000 0 0x1000>,
+                   <0 0x0ace8000 0 0x1000>,
+@@ -211,12 +211,12 @@ examples:
+                   <0 0x0acc7000 0 0x2000>,
+                   <0 0x0accb000 0 0x2000>;
+ 
+-            reg-names = "csid0",
++            reg-names = "csid_wrapper",
++                        "csid0",
+                         "csid1",
+                         "csid2",
+                         "csid_lite0",
+                         "csid_lite1",
+-                        "csid_wrapper",
+                         "csiphy0",
+                         "csiphy1",
+                         "csiphy2",
+-- 
+2.43.0
+

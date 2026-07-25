@@ -1,0 +1,42 @@
+From 94c8464a74c10a67134fb2a3216c9e9a2d7e2b23 Mon Sep 17 00:00:00 2001
+From: Hungyu Lin <dennylin0707@gmail.com>
+Date: Thu, 4 Jun 2026 00:55:05 +0000
+Subject: [PATCH 246/263] media: qcom: camss: Rename unused macro parameter
+
+The ISPIF_VFE_m_RDI_INTF_n_PACK_CFG_0_CID_c_PLAIN() macro
+declares a parameter named 'c' but uses 'cid' in the macro
+body instead.
+
+Rename the parameter to match the identifier used in the
+macro body and silence the checkpatch warning:
+
+  WARNING: Argument 'c' is not used in function-like macro
+
+No functional change intended.
+
+Reviewed-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Reviewed-by: Vladimir Zapolskiy <vladimir.zapolskiy@linaro.org>
+Signed-off-by: Hungyu Lin <dennylin0707@gmail.com>
+Link: https://lore.kernel.org/r/20260604005505.39275-1-dennylin0707@gmail.com
+---
+ drivers/media/platform/qcom/camss/camss-ispif.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/camss/camss-ispif.c b/drivers/media/platform/qcom/camss/camss-ispif.c
+index aaf3caa42..20ccd7b1f 100644
+--- a/drivers/media/platform/qcom/camss/camss-ispif.c
++++ b/drivers/media/platform/qcom/camss/camss-ispif.c
+@@ -83,8 +83,8 @@
+ 					(0x270 + 0x200 * (m) + 0x4 * (n))
+ #define ISPIF_VFE_m_RDI_INTF_n_PACK_CFG_1(m, n)	\
+ 					(0x27c + 0x200 * (m) + 0x4 * (n))
+-#define ISPIF_VFE_m_RDI_INTF_n_PACK_CFG_0_CID_c_PLAIN(c)	\
+-					(1 << ((cid % 8) * 4))
++#define ISPIF_VFE_m_RDI_INTF_n_PACK_CFG_0_CID_c_PLAIN(cid)	\
++					(1 << (((cid) % 8) * 4))
+ #define ISPIF_VFE_m_PIX_INTF_n_STATUS(m, n)	\
+ 					(0x2c0 + 0x200 * (m) + 0x4 * (n))
+ #define ISPIF_VFE_m_RDI_INTF_n_STATUS(m, n)	\
+-- 
+2.43.0
+

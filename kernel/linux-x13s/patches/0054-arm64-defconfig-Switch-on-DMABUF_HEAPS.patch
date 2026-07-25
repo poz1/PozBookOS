@@ -1,0 +1,31 @@
+From c9d6d0a1f968f1aacac15573ce2cb6eabf9c77d9 Mon Sep 17 00:00:00 2001
+From: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Date: Thu, 14 Mar 2024 13:36:03 +0000
+Subject: [PATCH 054/263] arm64: defconfig: Switch on DMABUF_HEAPS
+
+dma-buf heaps are required to get cached output buffers for libcamera to
+work with and are a requirement from libcamera to enable sharing of
+cammera framebuffers.
+
+Signed-off-by: Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index b67d5b1fc..52f1433ab 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1365,6 +1365,7 @@ CONFIG_RTC_DRV_RENESAS_RTCA3=m
+ CONFIG_RTC_DRV_NVIDIA_VRS10=m
+ CONFIG_RTC_DRV_MACSMC=m
+ CONFIG_DMADEVICES=y
++CONFIG_DMABUF_HEAPS=y
+ CONFIG_APPLE_ADMAC=m
+ CONFIG_DMA_BCM2835=y
+ CONFIG_DMA_SUN6I=m
+-- 
+2.43.0
+

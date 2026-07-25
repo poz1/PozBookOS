@@ -1,0 +1,26 @@
+From a72360f5535ebe800c6c447486dfe0dbe02e018c Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Sat, 6 Dec 2025 18:37:52 -0600
+Subject: [PATCH 099/263] arm64: qcom_laptops.config: Enable UHID
+
+Some modern bluetooth mice require UHID in order to work properly.
+Enable it as a module.
+
+Signed-off-by: Steev Klimaszewski <threeway@gmail.com>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+index f165180c8..b301b1373 100644
+--- a/arch/arm64/configs/qcom_laptops.config
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -99,3 +99,4 @@ CONFIG_SND_USB_AUDIO_MIDI_V2=y
+ CONFIG_FW_LOADER_COMPRESS=y
+ CONFIG_FW_LOADER_COMPRESS_XZ=y
+ CONFIG_FW_LOADER_COMPRESS_ZSTD=y
++CONFIG_UHID
+-- 
+2.43.0
+

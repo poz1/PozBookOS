@@ -1,0 +1,36 @@
+From 2a145b46831c5df87542500ec011b7d8fabe38ff Mon Sep 17 00:00:00 2001
+From: Aleksandrs Vinarskis <alex.vinarskis@gmail.com>
+Date: Thu, 10 Apr 2025 21:29:14 +0200
+Subject: [PATCH 035/263] arm64: dts: qcom: x1e80100-dell-xps13-9345: enable
+ MICs LDO
+
+Particular device comes without headset combo jack, hence does not
+feature wcd codec IC. In such cases, DMICs are powered from vreg_l1b.
+Describe both microphones in the audio routing. vdd-micb is defined
+for lpass-macro already.
+
+Signed-off-by: Aleksandrs Vinarskis <alex.vinarskis@gmail.com>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts b/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
+index 66d2366a0..54dbfb540 100644
+--- a/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
++++ b/arch/arm64/boot/dts/qcom/x1e80100-dell-xps13-9345.dts
+@@ -157,7 +157,9 @@ sound {
+ 		audio-routing = "WooferLeft IN", "WSA WSA_SPK1 OUT",
+ 				"TweeterLeft IN", "WSA WSA_SPK2 OUT",
+ 				"WooferRight IN", "WSA2 WSA_SPK1 OUT",
+-				"TweeterRight IN", "WSA2 WSA_SPK2 OUT";
++				"TweeterRight IN", "WSA2 WSA_SPK2 OUT",
++				"VA DMIC0", "vdd-micb",
++				"VA DMIC1", "vdd-micb";
+ 
+ 		wsa-dai-link {
+ 			link-name = "WSA Playback";
+-- 
+2.43.0
+

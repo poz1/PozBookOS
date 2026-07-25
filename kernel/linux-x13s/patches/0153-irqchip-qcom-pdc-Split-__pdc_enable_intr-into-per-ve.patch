@@ -1,0 +1,83 @@
+From 6124057e6384974055a12c3b58b7551784335d9e Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:39 +0530
+Subject: [PATCH 153/263] irqchip/qcom-pdc: Split __pdc_enable_intr() into
+ per-version helpers
+
+The __pdc_enable_intr() function contains a version branch that selects
+between two distinct enable mechanisms: a bank-based IRQ_ENABLE_BANK
+register for HW < 3.2, and a per-pin enable bit in IRQ_i_CFG for
+HW >= 3.2. These two paths share no code and serve different hardware.
+
+Split them into two focused static functions: pdc_enable_intr_bank()
+for HW < 3.2 and pdc_enable_intr_cfg() for HW >= 3.2. No functional
+change.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-3-mukesh.ojha@oss.qualcomm.com
+---
+ drivers/irqchip/qcom-pdc.c | 42 +++++++++++++++++++++++---------------
+ 1 file changed, 26 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/irqchip/qcom-pdc.c b/drivers/irqchip/qcom-pdc.c
+index 32b77fa93..a72e32896 100644
+--- a/drivers/irqchip/qcom-pdc.c
++++ b/drivers/irqchip/qcom-pdc.c
+@@ -97,28 +97,38 @@ static void pdc_x1e_irq_enable_write(u32 bank, u32 enable)
+ 	pdc_base_reg_write(base, IRQ_ENABLE_BANK, bank, enable);
+ }
+ 
+-static void __pdc_enable_intr(int pin_out, bool on)
++static void pdc_enable_intr_bank(int pin_out, bool on)
+ {
+ 	unsigned long enable;
++	u32 index, mask;
+ 
+-	if (pdc_version < PDC_VERSION_3_2) {
+-		u32 index, mask;
++	index = pin_out / 32;
++	mask = pin_out % 32;
+ 
+-		index = pin_out / 32;
+-		mask = pin_out % 32;
++	enable = pdc_reg_read(IRQ_ENABLE_BANK, index);
++	__assign_bit(mask, &enable, on);
+ 
+-		enable = pdc_reg_read(IRQ_ENABLE_BANK, index);
+-		__assign_bit(mask, &enable, on);
++	if (pdc_x1e_quirk)
++		pdc_x1e_irq_enable_write(index, enable);
++	else
++		pdc_reg_write(IRQ_ENABLE_BANK, index, enable);
++}
+ 
+-		if (pdc_x1e_quirk)
+-			pdc_x1e_irq_enable_write(index, enable);
+-		else
+-			pdc_reg_write(IRQ_ENABLE_BANK, index, enable);
+-	} else {
+-		enable = pdc_reg_read(IRQ_i_CFG, pin_out);
+-		__assign_bit(IRQ_i_CFG_IRQ_ENABLE, &enable, on);
+-		pdc_reg_write(IRQ_i_CFG, pin_out, enable);
+-	}
++static void pdc_enable_intr_cfg(int pin_out, bool on)
++{
++	unsigned long enable;
++
++	enable = pdc_reg_read(IRQ_i_CFG, pin_out);
++	__assign_bit(IRQ_i_CFG_IRQ_ENABLE, &enable, on);
++	pdc_reg_write(IRQ_i_CFG, pin_out, enable);
++}
++
++static void __pdc_enable_intr(int pin_out, bool on)
++{
++	if (pdc_version < PDC_VERSION_3_2)
++		pdc_enable_intr_bank(pin_out, on);
++	else
++		pdc_enable_intr_cfg(pin_out, on);
+ }
+ 
+ static void pdc_enable_intr(struct irq_data *d, bool on)
+-- 
+2.43.0
+

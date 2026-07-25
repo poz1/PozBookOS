@@ -1,0 +1,59 @@
+From e965c5062262feb2d6d2842935cb101e2bbd084d Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Thu, 4 Sep 2025 18:51:15 +0200
+Subject: [PATCH 063/263] arm64: qcom_laptops.config: Add useful features for
+ laptops
+
+Add a config fragment enabling useful features related to regular laptop
+usage, like full disk encryption, network sharing to test devices,
+working with network shared from a mobile phone.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Neil Armstrong <neil.armstrong@linaro.org>
+Signed-off-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+---
+ arch/arm64/configs/qcom_laptops.config | 32 ++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+ create mode 100644 arch/arm64/configs/qcom_laptops.config
+
+diff --git a/arch/arm64/configs/qcom_laptops.config b/arch/arm64/configs/qcom_laptops.config
+new file mode 100644
+index 000000000..33f971cd2
+--- /dev/null
++++ b/arch/arm64/configs/qcom_laptops.config
+@@ -0,0 +1,32 @@
++# Full disk encryption
++CONFIG_DM_CRYPT=m
++
++# libcamera softisp
++CONFIG_DMABUF_HEAPS_CMA=y
++
++# For Ubuntu/snap
++CONFIG_SQUASHFS_LZ4=y
++CONFIG_SQUASHFS_LZO=y
++CONFIG_SQUASHFS_XZ=y
++
++# For network sharing, e.g. in Ubuntu connection sharing with test boards
++CONFIG_IP_ADVANCED_ROUTER=y
++CONFIG_NF_TABLES=m
++CONFIG_NF_TABLES_INET=y
++CONFIG_NFT_NAT=m
++CONFIG_NFT_MASQ=m
++CONFIG_NFT_CT=m
++CONFIG_NFT_REJECT=m
++CONFIG_NF_CONNTRACK=m
++
++# Network from mobile phone (so as a device)
++CONFIG_USB_NET_RNDIS_HOST=m
++
++# Typical use-cases for desktop/laptop
++CONFIG_NTFS_FS=m
++CONFIG_SND_USB_AUDIO=m
++CONFIG_SND_SOC_USB=m
++CONFIG_SND_USB_AUDIO_MIDI_V2=y
++CONFIG_FW_LOADER_COMPRESS=y
++CONFIG_FW_LOADER_COMPRESS_XZ=y
++CONFIG_FW_LOADER_COMPRESS_ZSTD=y
+-- 
+2.43.0
+

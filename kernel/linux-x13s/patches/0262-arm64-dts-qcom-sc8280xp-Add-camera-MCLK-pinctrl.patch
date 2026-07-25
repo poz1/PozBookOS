@@ -1,0 +1,85 @@
+From 18428079507fe36fcd4b0a76829e0d8ad42d9908 Mon Sep 17 00:00:00 2001
+From: Pengyu Luo <mitltlatltl@gmail.com>
+Date: Mon, 29 Jun 2026 14:59:04 +0800
+Subject: [PATCH 262/263] arm64: dts: qcom: sc8280xp: Add camera MCLK pinctrl
+
+Define pinctrl definitions to enable camera master clocks on sc8280xp.
+
+Suggested-by: Vladimir Zapolskiy <vladimir.zapolskiy@linaro.org>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Signed-off-by: Pengyu Luo <mitltlatltl@gmail.com>
+Link: https://lore.kernel.org/r/20260629065905.15651-3-mitltlatltl@gmail.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 56 ++++++++++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 9e3155f41..3e56e66e1 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -5397,6 +5397,62 @@ tlmm: pinctrl@f100000 {
+ 			gpio-ranges = <&tlmm 0 0 230>;
+ 			wakeup-parent = <&pdc>;
+ 
++			cam_mclk0_default: cam-mclk0-default-state {
++				pins = "gpio119";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk1_default: cam-mclk1-default-state {
++				pins = "gpio120";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk2_default: cam-mclk2-default-state {
++				pins = "gpio16";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk3_default: cam-mclk3-default-state {
++				pins = "gpio17";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk4_default: cam-mclk4-default-state {
++				pins = "gpio6";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk5_default: cam-mclk5-default-state {
++				pins = "gpio7";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk6_default: cam-mclk6-default-state {
++				pins = "gpio33";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
++			cam_mclk7_default: cam-mclk7-default-state {
++				pins = "gpio34";
++				function = "cam_mclk";
++				drive-strength = <6>;
++				bias-disable;
++			};
++
+ 			cci0_default: cci0-default-state {
+ 				cci0_i2c0_default: cci0-i2c0-default-pins {
+ 					/* cci_i2c_sda0, cci_i2c_scl0 */
+-- 
+2.43.0
+

@@ -1,0 +1,32 @@
+From 72c5719496ea5d247f99f9ee9f3bcac341d4cf11 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:58 +0530
+Subject: [PATCH 172/263] arm64: dts: qcom: sm6350: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-22-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sm6350.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm6350.dtsi b/arch/arm64/boot/dts/qcom/sm6350.dtsi
+index 9f9b9f9af..3b78835ca 100644
+--- a/arch/arm64/boot/dts/qcom/sm6350.dtsi
++++ b/arch/arm64/boot/dts/qcom/sm6350.dtsi
+@@ -2489,7 +2489,7 @@ dispcc: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sm6350-pdc", "qcom,pdc";
+-			reg = <0x0 0x0b220000 0x0 0x30000>, <0x0 0x17c000f0 0x0 0x64>;
++			reg = <0x0 0x0b220000 0x0 0x10000>, <0x0 0x17c000f0 0x0 0x64>;
+ 			qcom,pdc-ranges = <0 480 94>, <94 609 31>,
+ 					  <125 63 1>, <126 655 12>, <138 139 15>;
+ 			#interrupt-cells = <2>;
+-- 
+2.43.0
+

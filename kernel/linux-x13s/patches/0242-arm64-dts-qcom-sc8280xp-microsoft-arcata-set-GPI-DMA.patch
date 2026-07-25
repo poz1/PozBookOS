@@ -1,0 +1,49 @@
+From 054e6471c843b1b9588c37d768b402ee7af9399a Mon Sep 17 00:00:00 2001
+From: Icenowy Zheng <zhengxingda@iscas.ac.cn>
+Date: Tue, 2 Jun 2026 16:14:49 +0800
+Subject: [PATCH 242/263] arm64: dts: qcom: sc8280xp-microsoft-arcata: set GPI
+ DMA channels
+
+It's found that some GPI interfaces shouldn't be touched by HLOS,
+otherwise system hang / reset happens.
+
+The GPI interface availability information is available via the ACPI
+DSDT table, as interrupt resources for \_SB_.QGP* devices.
+
+Add such information to the device tree file.
+
+The DSDT table is acquired at [1].
+
+[1] https://github.com/aarch64-laptops/build/blob/534b169ba00230af434ce99fca8af93dc8ec0929/misc/microsoft-surface-pro-9-5G/dsdt.dsl
+
+Signed-off-by: Icenowy Zheng <zhengxingda@iscas.ac.cn>
+Link: https://lore.kernel.org/r/20260602081451.3808833-5-zhengxingda@iscas.ac.cn
+---
+ arch/arm64/boot/dts/qcom/sc8280xp-microsoft-arcata.dts | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp-microsoft-arcata.dts b/arch/arm64/boot/dts/qcom/sc8280xp-microsoft-arcata.dts
+index f252e9f1c..0f5aec24b 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp-microsoft-arcata.dts
++++ b/arch/arm64/boot/dts/qcom/sc8280xp-microsoft-arcata.dts
+@@ -444,14 +444,17 @@ &dispcc1 {
+ };
+ 
+ &gpi_dma0 {
++	dma-channel-mask = <0x3>;
+ 	status = "okay";
+ };
+ 
+ &gpi_dma1 {
++	dma-channel-mask = <0x3>;
+ 	status = "okay";
+ };
+ 
+ &gpi_dma2 {
++	dma-channel-mask = <0x23>;
+ 	status = "okay";
+ };
+ 
+-- 
+2.43.0
+

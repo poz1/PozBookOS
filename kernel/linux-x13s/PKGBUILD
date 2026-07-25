@@ -2,13 +2,13 @@
 # Maintainer: Alex Robinson <alex@ironrobin.net>
 
 buildarch=8
-_stable_tag=v6.18.40
+_stable_tag=v7.1.5
 
 pkgbase=linux-x13s
-_srcname=linux-6.18
+_srcname=linux-7.1
 _kernelname=${pkgbase#linux}
 _desc="ThinkPad X13s (Snapdragon 8cx Gen 3)"
-pkgver="6.18.40"
+pkgver="7.1.5"
 pkgrel=1
 
 _arch=arm64
@@ -48,7 +48,7 @@ prepare() {
 
   cd $_srcname
 
-  echo "Applying X13s patches (from steev's lenovo-x13s-linux-6.18.y)..."
+  echo "Applying X13s patches (from steev's lenovo-x13s-linux-7.0.y, forward-ported to 7.1)..."
   local _patch
   for _patch in "${startdir}"/patches/*.patch; do
     echo "  Applying $(basename ${_patch})..."

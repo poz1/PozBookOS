@@ -1,0 +1,47 @@
+From 45768cdeeaeb0b543b03a031ac23f398a083d455 Mon Sep 17 00:00:00 2001
+From: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Date: Fri, 15 May 2026 13:56:36 +0300
+Subject: [PATCH 049/263] arm64: dts: qcom: sc8280xp: sort reserved memory
+ regions
+
+Move memory region reserved for the GPU to its proper place in DT.
+
+Fixes: 6e9612ced0c9 ("arm64: dts: qcom: sc8280xp: create common zap-shader node")
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Signed-off-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260515-iris-sc8280xp-v7-2-2e21f6db1897@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 706eb1309..41c57e7dc 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -691,11 +691,6 @@ reserved-region@85b00000 {
+ 			no-map;
+ 		};
+ 
+-		pil_gpu_mem: gpu-mem@8bf00000 {
+-			reg = <0 0x8bf00000 0 0x2000>;
+-			no-map;
+-		};
+-
+ 		pil_adsp_mem: adsp-region@86c00000 {
+ 			reg = <0 0x86c00000 0 0x2000000>;
+ 			no-map;
+@@ -711,6 +706,11 @@ pil_nsp0_mem: cdsp0-region@8a100000 {
+ 			no-map;
+ 		};
+ 
++		pil_gpu_mem: gpu-mem@8bf00000 {
++			reg = <0 0x8bf00000 0 0x2000>;
++			no-map;
++		};
++
+ 		pil_nsp1_mem: cdsp1-region@8c600000 {
+ 			reg = <0 0x8c600000 0 0x1e00000>;
+ 			no-map;
+-- 
+2.43.0
+

@@ -1,0 +1,37 @@
+From abd942e9aad660c77015ec19eaa8e2188882d509 Mon Sep 17 00:00:00 2001
+From: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Date: Sun, 1 Feb 2026 12:49:03 +0200
+Subject: [PATCH 045/263] arm64: dts: qcom: sm8250: add MX power domain to the
+ video CC
+
+To configure the video PLLs and enable the video GDSCs on SM8250,
+platform, the MX rail must be ON along with MMCX. Update the videocc
+device node to include the MX power domain.
+
+Fixes: 5b9ec225d4ed ("arm64: dts: qcom: sm8250: Add videocc DT node")
+Signed-off-by: Dmitry Baryshkov <dmitry.baryshkov@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260201-iris-venus-fix-sm8250-v2-6-6f40d2605c89@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sm8250.dtsi | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm8250.dtsi b/arch/arm64/boot/dts/qcom/sm8250.dtsi
+index 37c41cc1a..b1c13a40d 100644
+--- a/arch/arm64/boot/dts/qcom/sm8250.dtsi
++++ b/arch/arm64/boot/dts/qcom/sm8250.dtsi
+@@ -4379,8 +4379,10 @@ videocc: clock-controller@abf0000 {
+ 			clocks = <&gcc GCC_VIDEO_AHB_CLK>,
+ 				 <&rpmhcc RPMH_CXO_CLK>,
+ 				 <&rpmhcc RPMH_CXO_CLK_A>;
+-			power-domains = <&rpmhpd RPMHPD_MMCX>;
+-			required-opps = <&rpmhpd_opp_low_svs>;
++			power-domains = <&rpmhpd RPMHPD_MMCX>,
++					<&rpmhpd RPMHPD_MX>;
++			required-opps = <&rpmhpd_opp_low_svs>,
++					<&rpmhpd_opp_low_svs>;
+ 			clock-names = "iface", "bi_tcxo", "bi_tcxo_ao";
+ 			#clock-cells = <1>;
+ 			#reset-cells = <1>;
+-- 
+2.43.0
+

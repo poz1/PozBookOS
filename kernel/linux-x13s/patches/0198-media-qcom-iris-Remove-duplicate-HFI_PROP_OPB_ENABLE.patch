@@ -1,0 +1,33 @@
+From 23c2be872bc31279b03082bbb27b9c481c89396b Mon Sep 17 00:00:00 2001
+From: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Date: Wed, 22 Apr 2026 16:46:38 +0530
+Subject: [PATCH 198/263] media: qcom: iris: Remove duplicate
+ HFI_PROP_OPB_ENABLE entry
+
+HFI_PROP_OPB_ENABLE/iris_hfi_gen2_set_opb_enable appeared twice in the
+dispatch table, causing the property to be sent to firmware twice on every
+config-params call.
+
+Fixes: 2af481a459a4 ("media: iris: Define AV1-specific platform capabilities and properties")
+Signed-off-by: Dikshita Agarwal <dikshita.agarwal@oss.qualcomm.com>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260422-iris-code-improvement-v1-5-8e150482212d@oss.qualcomm.com
+---
+ drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+index 32b13ea43..bbcb84f8b 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_gen2_command.c
+@@ -688,7 +688,6 @@ static int iris_hfi_gen2_session_set_config_params(struct iris_inst *inst, u32 p
+ 		{HFI_PROP_FRAME_RATE,                 iris_hfi_gen2_set_frame_rate             },
+ 		{HFI_PROP_AV1_FILM_GRAIN_PRESENT,     iris_hfi_gen2_set_film_grain             },
+ 		{HFI_PROP_AV1_SUPER_BLOCK_ENABLED,    iris_hfi_gen2_set_super_block            },
+-		{HFI_PROP_OPB_ENABLE,                 iris_hfi_gen2_set_opb_enable             },
+ 	};
+ 
+ 	if (inst->domain == DECODER) {
+-- 
+2.43.0
+

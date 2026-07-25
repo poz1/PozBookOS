@@ -156,6 +156,24 @@ zstd
 tealdeer
 unzip
 
+# --- Camera (CamSS + ov5675 via libcamera softISP) ---
+# The kernel side has always been complete (VIDEO_QCOM_CAMSS, VIDEO_OV5675,
+# UDMABUF); nothing in userspace could consume it. The sensor emits raw Bayer,
+# so libcamera's software ISP is what turns /dev/video* into a usable camera,
+# and pipewire-libcamera is what makes it visible to Firefox.
+libcamera
+libcamera-tools
+pipewire-libcamera
+v4l-utils
+
+# --- Hardware video decode (Iris VPU) ---
+# CONFIG_VIDEO_QCOM_IRIS=m plus the SC8280XP Iris device tree nodes now expose a
+# V4L2 M2M decoder. These are the userspace stacks that can actually drive it.
+gstreamer
+gst-plugins-good
+gst-plugins-bad
+mpv
+
 # --- Custom X13s packages ---
 linux-x13s
 zram-generator
@@ -164,6 +182,11 @@ zram-generator
 irqbalance
 powertop
 earlyoom
+
+# --- Display colour temperature ---
+# Patch 0042 adds the DSPP GC driver, which exposes the GAMMA_LUT DRM property
+# on this SoC. gammastep is what uses it under a wlroots compositor.
+gammastep
 
 # --- Security (AppArmor — kernel has CONFIG_SECURITY_APPARMOR=y, this adds userspace) ---
 apparmor

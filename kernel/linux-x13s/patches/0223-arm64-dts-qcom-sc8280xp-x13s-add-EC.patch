@@ -1,0 +1,54 @@
+From 4146d82485b26b920d0c302c2e531c8b39105b53 Mon Sep 17 00:00:00 2001
+From: Steev Klimaszewski <threeway@gmail.com>
+Date: Fri, 23 Jan 2026 18:40:10 -0600
+Subject: [PATCH 223/263] arm64: dts: qcom: sc8280xp-x13s: add EC
+
+Describe ThinkPad Embedded Controller in the X13s device tree,
+which adds LED and special key support.
+
+Signed-off-by: Steev Klimaszewski <threeway@gmail.com>
+---
+ .../qcom/sc8280xp-lenovo-thinkpad-x13s.dts    | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts b/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
+index 9595c0225..311097871 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
++++ b/arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dts
+@@ -805,6 +805,20 @@ touchscreen@10 {
+ 	};
+ };
+ 
++&i2c8 {
++	clock-frequency = <400000>;
++	status = "okay";
++
++	embedded-controller@28 {
++		compatible = "lenovo,thinkpad-x13s-ec";
++		reg = <0x28>;
++		interrupts-extended = <&tlmm 176 IRQ_TYPE_LEVEL_LOW>;
++		pinctrl-0 = <&ec_int_n_default>;
++		pinctrl-names = "default";
++		wakeup-source;
++	};
++};
++
+ &i2c11 {
+ 	clock-frequency = <400000>;
+ 
+@@ -1595,6 +1609,12 @@ sc-rgb-xshut-n-pins {
+ 		};
+ 	};
+ 
++	ec_int_n_default: ec-int-n-state {
++		pins = "gpio176";
++		functions = "gpio";
++		bias-disable;
++	};
++
+ 	edp_reg_en: edp-reg-en-state {
+ 		pins = "gpio25";
+ 		function = "gpio";
+-- 
+2.43.0
+

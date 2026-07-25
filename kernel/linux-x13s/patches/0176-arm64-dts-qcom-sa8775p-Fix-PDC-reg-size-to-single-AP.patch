@@ -1,0 +1,32 @@
+From 7b780f5091dc4817674a796dd2eb703dddd48085 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:11:02 +0530
+Subject: [PATCH 176/263] arm64: dts: qcom: sa8775p: Fix PDC reg size to single
+ APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-26-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/lemans.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/lemans.dtsi b/arch/arm64/boot/dts/qcom/lemans.dtsi
+index be8c8c59e..609ad70f2 100644
+--- a/arch/arm64/boot/dts/qcom/lemans.dtsi
++++ b/arch/arm64/boot/dts/qcom/lemans.dtsi
+@@ -5536,7 +5536,7 @@ dispcc0: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sa8775p-pdc", "qcom,pdc";
+-			reg = <0x0 0x0b220000 0x0 0x30000>,
++			reg = <0x0 0x0b220000 0x0 0x10000>,
+ 			      <0x0 0x17c000f0 0x0 0x64>;
+ 			qcom,pdc-ranges = <0 480 40>,
+ 					  <40 140 14>,
+-- 
+2.43.0
+

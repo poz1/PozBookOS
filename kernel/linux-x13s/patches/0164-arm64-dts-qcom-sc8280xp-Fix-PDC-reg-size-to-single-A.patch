@@ -1,0 +1,32 @@
+From 630032fa6474d66f9a3ec0feed65aebedaa50106 Mon Sep 17 00:00:00 2001
+From: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Date: Sat, 11 Apr 2026 00:10:50 +0530
+Subject: [PATCH 164/263] arm64: dts: qcom: sc8280xp: Fix PDC reg size to
+ single APSS DRV region
+
+The PDC reg size was 0x30000, covering three DRV regions. Linux only
+needs the APSS DRV region which is a single 0x10000 window. Reduce
+the size to 0x10000 to describe only the region actually used.
+
+Signed-off-by: Mukesh Ojha <mukesh.ojha@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260410184124.1068210-14-mukesh.ojha@oss.qualcomm.com
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 45e1dd5a2..e60c90968 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -5194,7 +5194,7 @@ dispcc0: clock-controller@af00000 {
+ 
+ 		pdc: interrupt-controller@b220000 {
+ 			compatible = "qcom,sc8280xp-pdc", "qcom,pdc";
+-			reg = <0 0x0b220000 0 0x30000>, <0 0x17c000f0 0 0x60>;
++			reg = <0 0x0b220000 0 0x10000>, <0 0x17c000f0 0 0x60>;
+ 			qcom,pdc-ranges = <0 480 40>,
+ 					  <40 140 14>,
+ 					  <54 263 1>,
+-- 
+2.43.0
+

@@ -1,0 +1,41 @@
+From 319d9dc259accf14995fe6943af98f30c7ab89b5 Mon Sep 17 00:00:00 2001
+From: Xilin Wu <sophon@radxa.com>
+Date: Wed, 3 Jun 2026 23:47:42 +0800
+Subject: [PATCH 255/263] arm64: dts: qcom: sc8280xp: add missing Iris IOMMU
+ SID
+
+The Iris VPU on SC8280XP can issue memory transactions using stream ID
+0x2a07. With only the 0x2a00 SID described in the IOMMU list, those
+transactions are not attached to the Iris IOMMU domain and can trigger a
+non-secure SMMU global fault during video decode.
+
+This was observed while decoding H.264, where the faulting address fell
+inside a DPB buffer mapped for the Iris device.
+
+Add the missing 0x2a07 stream ID so both Iris access paths are mapped by
+the SMMU.
+
+Note that the issue was observed using Gen2 HFI firmware.
+
+Signed-off-by: Xilin Wu <sophon@radxa.com>
+---
+ arch/arm64/boot/dts/qcom/sc8280xp.dtsi | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+index 7795b1287..153025481 100644
+--- a/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc8280xp.dtsi
+@@ -4264,7 +4264,8 @@ &config_noc SLAVE_VENUS_CFG QCOM_ICC_TAG_ACTIVE_ONLY>,
+ 					     "video-mem";
+ 
+ 			operating-points-v2 = <&iris_opp_table>;
+-			iommus = <&apps_smmu 0x2a00 0x400>;
++			iommus = <&apps_smmu 0x2a00 0x400>,
++				 <&apps_smmu 0x2a07 0x400>;
+ 			memory-region = <&pil_video_mem>;
+ 
+ 			status = "disabled";
+-- 
+2.43.0
+

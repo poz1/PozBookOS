@@ -1,0 +1,257 @@
+From 52f487123781dc369c2de72ae420b6f0700799d2 Mon Sep 17 00:00:00 2001
+From: Sebastian Reichel <sre@kernel.org>
+Date: Sat, 27 Dec 2025 17:45:49 +0100
+Subject: [PATCH 106/263] hwmon: (t14s-fan-ctrl) introduce new driver
+
+Introduce new driver for the Thinkpad T14s Gen6 Snapdragon fan
+controller, which is separate from the embedded controller. The
+driver right now exposes FAN speed and enable status. The ACPI
+API suggests theoretical support for a second fan, but that is
+always disabled with 0 RPM.
+
+The ACPI DSDT also suggests support for setting fan profiles,
+trip points and lookup tables as well as thermistor access. I
+have not yet figured out the API details for them.
+
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+---
+ drivers/hwmon/Kconfig                         |  10 +
+ drivers/hwmon/Makefile                        |   1 +
+ drivers/hwmon/lenovo-thinkpad-t14s-fan-ctrl.c | 192 ++++++++++++++++++
+ 3 files changed, 203 insertions(+)
+ create mode 100644 drivers/hwmon/lenovo-thinkpad-t14s-fan-ctrl.c
+
+diff --git a/drivers/hwmon/Kconfig b/drivers/hwmon/Kconfig
+index 328867242..0407cea0d 100644
+--- a/drivers/hwmon/Kconfig
++++ b/drivers/hwmon/Kconfig
+@@ -2337,6 +2337,16 @@ config SENSORS_SPD5118_DETECT
+ 
+ 	  If unsure, say Y.
+ 
++config SENSORS_T14S_FAN_CTRL
++	tristate "Lenovo T14s Gen6 Snapdragon Fan Controller"
++	depends on I2C
++	help
++	  If you say yes here you get support for the fan controller in the
++	  Lenovo T14s Gen6 Snapdragon laptop.
++
++	  This driver can also be built as a module. If so, the module
++	  will be called lenovo-thinkpad-t14s-fan-ctrl.
++
+ config SENSORS_TC74
+ 	tristate "Microchip TC74"
+ 	depends on I2C
+diff --git a/drivers/hwmon/Makefile b/drivers/hwmon/Makefile
+index 5833c807c..249f69d87 100644
+--- a/drivers/hwmon/Makefile
++++ b/drivers/hwmon/Makefile
+@@ -224,6 +224,7 @@ obj-$(CONFIG_SENSORS_SURFACE_FAN)+= surface_fan.o
+ obj-$(CONFIG_SENSORS_SURFACE_TEMP)+= surface_temp.o
+ obj-$(CONFIG_SENSORS_SY7636A)	+= sy7636a-hwmon.o
+ obj-$(CONFIG_SENSORS_AMC6821)	+= amc6821.o
++obj-$(CONFIG_SENSORS_T14S_FAN_CTRL)	+= lenovo-thinkpad-t14s-fan-ctrl.o
+ obj-$(CONFIG_SENSORS_TC74)	+= tc74.o
+ obj-$(CONFIG_SENSORS_THMC50)	+= thmc50.o
+ obj-$(CONFIG_SENSORS_TMP102)	+= tmp102.o
+diff --git a/drivers/hwmon/lenovo-thinkpad-t14s-fan-ctrl.c b/drivers/hwmon/lenovo-thinkpad-t14s-fan-ctrl.c
+new file mode 100644
+index 000000000..fe1f6d832
+--- /dev/null
++++ b/drivers/hwmon/lenovo-thinkpad-t14s-fan-ctrl.c
+@@ -0,0 +1,192 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * Copyright (c) 2025 Sebastian Reichel <sre@kernel.org>
++ */
++
++#include <linux/hwmon.h>
++#include <linux/i2c.h>
++#include <linux/mod_devicetable.h>
++
++struct t14s_fan_ctrl {
++	struct i2c_client *i2c;
++	struct device *dev;
++};
++
++enum t14s_fan_ctrl_fan {
++	FAN1 = 0x01,
++	FAN2 = 0x02,
++};
++
++static const char * const t14s_fan_labels[] = {
++	"System",
++};
++
++static int t14s_fan_ctrl_blk_transfer(struct t14s_fan_ctrl *t14s_fan_ctrl, u8 cmd, u8 arg, void *databuf, u8 len)
++{
++	struct i2c_client *client = t14s_fan_ctrl->i2c;
++	u8 cmdbuf[2] = {cmd, arg};
++	struct i2c_msg msgs[2] = {
++		{ .addr = client->addr, .len = sizeof(cmdbuf), .buf = (u8 *) &cmdbuf },
++		{ .addr = client->addr, .len = len, .buf = databuf,
++		  .flags = I2C_M_RD } };
++	int ret;
++
++	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
++	if (ret < 0)
++		dev_err(t14s_fan_ctrl->dev, "command 0x%02x 0x%02x failed: %d\n", cmd, arg, ret);
++	return ret;
++}
++
++static int t14s_fan_ctrl_fan_status(struct t14s_fan_ctrl *t14s_fan_ctrl, enum t14s_fan_ctrl_fan fan)
++{
++	u8 databuf[1];
++	int ret;
++
++	// sudo i2ctransfer -y 5 w2@0x36 0x21 0x01 r1
++	ret = t14s_fan_ctrl_blk_transfer(t14s_fan_ctrl, 0x21, fan, databuf, sizeof(databuf));
++	if (ret < 0)
++		return ret;
++
++	return databuf[0]; // 0 = off, 1 = on
++}
++
++static int t14s_fan_ctrl_fan_speed(struct t14s_fan_ctrl *t14s_fan_ctrl, enum t14s_fan_ctrl_fan fan)
++{
++	u8 databuf[3];
++	int ret;
++
++	// sudo i2ctransfer -y 5 w2@0x36 0x22 0x01 r3
++	ret = t14s_fan_ctrl_blk_transfer(t14s_fan_ctrl, 0x22, fan, databuf, sizeof(databuf));
++	if (ret < 0)
++		return ret;
++
++	return databuf[2] << 8 | databuf[1]; // RPM
++}
++
++static int
++t14s_fan_do_read_fan(struct t14s_fan_ctrl *t14s_fan_ctrl, u32 attr, int channel, long *val)
++{
++	int ret;
++
++	switch (attr) {
++	case hwmon_fan_enable:
++		ret = t14s_fan_ctrl_fan_status(t14s_fan_ctrl, channel);
++		if (ret < 0)
++			return ret;
++		*val = ret;
++		return 0;
++	case hwmon_fan_input:
++		ret = t14s_fan_ctrl_fan_speed(t14s_fan_ctrl, channel);
++		if (ret < 0)
++			return ret;
++		*val = ret;
++		return 0;
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
++static int
++t14s_fan_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
++		    u32 attr, int channel, long *val)
++{
++	struct t14s_fan_ctrl *t14s_fan_ctrl = dev_get_drvdata(dev);
++	channel++;
++
++	switch (type) {
++	case hwmon_fan:
++		return t14s_fan_do_read_fan(t14s_fan_ctrl, attr, channel, val);
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
++static umode_t
++t14s_fan_hwmon_is_visible(const void *data, enum hwmon_sensor_types type,
++			  u32 attr, int channel)
++{
++	switch (type) {
++	case hwmon_fan:
++		if (attr == hwmon_fan_input || attr == hwmon_fan_label)
++			return 0444;
++		return 0;
++	default:
++		return 0;
++	}
++}
++
++static int
++t14s_fan_hwmon_read_string(struct device *dev, enum hwmon_sensor_types type,
++			   u32 attr, int channel, const char **str)
++{
++	switch (type) {
++	case hwmon_fan:
++		*str = t14s_fan_labels[channel];
++		return 0;
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
++static const struct hwmon_ops t14s_fan_hwmon_ops = {
++	.is_visible = t14s_fan_hwmon_is_visible,
++	.read = t14s_fan_hwmon_read,
++	.read_string = t14s_fan_hwmon_read_string,
++};
++
++static const struct hwmon_channel_info *t14s_fan_hwmon_info[] = {
++	HWMON_CHANNEL_INFO(fan,
++			   HWMON_F_ENABLE | HWMON_F_INPUT | HWMON_F_LABEL),
++	NULL
++};
++
++static struct hwmon_chip_info t14s_fan_chip_info = {
++	.ops = &t14s_fan_hwmon_ops,
++	.info = t14s_fan_hwmon_info,
++};
++
++static int t14s_fan_ctrl_probe(struct i2c_client *client)
++{
++	struct device *dev = &client->dev;
++	struct t14s_fan_ctrl *t14s_fan_ctrl;
++	struct device *hwdev;
++
++	t14s_fan_ctrl = devm_kzalloc(dev, sizeof(*t14s_fan_ctrl), GFP_KERNEL);
++	if (!t14s_fan_ctrl)
++		return -ENOMEM;
++
++	t14s_fan_ctrl->i2c = client;
++	t14s_fan_ctrl->dev = dev;
++
++	hwdev = devm_hwmon_device_register_with_info(dev, "fan-controller",
++						     t14s_fan_ctrl,
++						     &t14s_fan_chip_info, NULL);
++
++	return PTR_ERR_OR_ZERO(hwdev);
++}
++
++static const struct i2c_device_id t14s_fan_ctrl_id_table[] = {
++	{ "tp-t14s-fan-ctrl" },
++	{}
++};
++MODULE_DEVICE_TABLE(i2c, t14s_fan_ctrl_id_table);
++
++static const struct of_device_id of_t14s_fan_ctrl_match_table[] = {
++	{ .compatible = "lenovo,thinkpad-t14s-fan-controller", },
++	{}
++};
++MODULE_DEVICE_TABLE(of, of_t14s_fan_ctrl_match_table);
++
++static struct i2c_driver t14s_fan_ctrl_driver = {
++	.probe		= t14s_fan_ctrl_probe,
++	.id_table	= t14s_fan_ctrl_id_table,
++	.driver		= {
++		.name	= "t14s_fan_ctrl",
++		.of_match_table = of_t14s_fan_ctrl_match_table,
++	},
++};
++module_i2c_driver(t14s_fan_ctrl_driver);
++
++MODULE_AUTHOR("Sebastian Reichel <sre@kernel.org>");
++MODULE_DESCRIPTION("Thinkpad T14s Gen6 Snapdragon fan controller driver");
++MODULE_LICENSE("GPL");
+-- 
+2.43.0
+

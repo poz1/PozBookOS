@@ -1,0 +1,43 @@
+From a7d8117b4149b575c28f8dea7e831f3d8dcd4eee Mon Sep 17 00:00:00 2001
+From: Shivam Rawat <shivrawa@qti.qualcomm.com>
+Date: Fri, 5 Jun 2026 01:38:17 +0530
+Subject: [PATCH 249/263] drm/msm/a6xx: Fix stale rpmh votes after suspend
+
+There are stale RPMH votes (BCM votes) observed after GMU suspend. This
+is because the rpmh stop sequences are skipped during gmu suspend. Fix
+this and also move GMU to reset state to avoid any further activity.
+
+Fixes: f248d5d5159a ("drm/msm/a6xx: Fix PDC sleep sequence")
+Signed-off-by: Shivam Rawat <shivrawa@qti.qualcomm.com>
+Signed-off-by: Akhil P Oommen <akhilpo@oss.qualcomm.com>
+Link: https://lore.kernel.org/r/20260605-assorted-fixes-june-v1-1-2caa04f7287c@oss.qualcomm.com
+---
+ drivers/gpu/drm/msm/adreno/a6xx_gmu.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/msm/adreno/a6xx_gmu.c b/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
+index 71bb621b0..a21dc2a4b 100644
+--- a/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_gmu.c
+@@ -642,7 +642,7 @@ static void a6xx_rpmh_stop(struct a6xx_gmu *gmu)
+ 	int ret;
+ 	u32 val;
+ 
+-	if (test_and_clear_bit(GMU_STATUS_FW_START, &gmu->status))
++	if (!test_and_clear_bit(GMU_STATUS_FW_START, &gmu->status))
+ 		return;
+ 
+ 	if (adreno_is_a840(adreno_gpu))
+@@ -1420,6 +1420,9 @@ static void a6xx_gmu_shutdown(struct a6xx_gmu *gmu)
+ 	/* Stop the interrupts and mask the hardware */
+ 	a6xx_gmu_irq_disable(gmu);
+ 
++	/* Halt the gmu cm3 core */
++	gmu_write(gmu, REG_A6XX_GMU_CM3_SYSRESET, 1);
++
+ 	/* Tell RPMh to power off the GPU */
+ 	a6xx_rpmh_stop(gmu);
+ 
+-- 
+2.43.0
+
