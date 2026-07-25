@@ -86,7 +86,7 @@ build() {
 
   # build!
   unset LDFLAGS
-  make $_llvm_args ${MAKEFLAGS} Image Image.gz modules
+  make $_llvm_args ${MAKEFLAGS} Image modules
   # Generate device tree blobs with symbols to support applying device tree overlays in U-Boot
   make $_llvm_args ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
 }
@@ -113,9 +113,12 @@ _package() {
   local kernver="$(<version)"
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
 
-  echo "Installing boot image (compressed) and dtbs..."
-  install -Dm644 arch/arm64/boot/Image.gz -T "${pkgdir}/boot/vmlinuz-${pkgbase}"
-  install -Dm644 arch/arm64/boot/Image -T "${pkgdir}/boot/vmlinux-${pkgbase}"
+  # On arm64 the EFI stub PE/COFF header lives only in the uncompressed Image.
+  # CONFIG_EFI_ZBOOT is off, so Image.gz is a bare gzip stream that no EFI
+  # bootloader can LoadImage(). Ship the raw Image as vmlinuz-* -- that is also
+  # the only name mkarchiso copies onto the ISO and into the EFI system partition.
+  echo "Installing boot image and dtb..."
+  install -Dm644 arch/arm64/boot/Image -T "${pkgdir}/boot/vmlinuz-${pkgbase}"
   # We just need the X13s dtb
   install -Dm644 arch/arm64/boot/dts/qcom/sc8280xp-lenovo-thinkpad-x13s.dtb -t "${pkgdir}/boot"
 
