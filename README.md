@@ -52,7 +52,7 @@ Live/installer ISO with Sway/Wayland desktop. SquashFS compressed with zstd leve
 
 | Feature | Detail |
 |---|---|
-| Desktop | Sway + Waybar + foot + wofi + mako (installed, not preconfigured -- the live session drops to a TTY) |
+| Desktop | Sway + Waybar + foot + wofi + mako, autostarted on tty1 (boot with `nosway` for a plain shell) |
 | Browser | Firefox |
 | Audio | PipeWire + WirePlumber with codec power-save |
 | GPU | Mesa/Turnip Vulkan 1.3 (Adreno 690) |
