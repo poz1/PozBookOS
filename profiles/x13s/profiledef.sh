@@ -3,7 +3,7 @@
 
 iso_name="archlinux-x13s"
 iso_label="ARCH_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
-iso_publisher="Alex Robinson <alex@ironrobin.net>"
+iso_publisher="PozBookOS <https://github.com/poz1/PozBookOS>"
 iso_application="ARM64 Arch Linux Live/Rescue Disk for ThinkPad X13s"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
@@ -20,5 +20,6 @@ file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/root"]="0:0:750"
   ["/root/.gnupg"]="0:0:700"
-  ["/usr/local/bin/ironrobin-setup"]="0:0:755"
+  ["/usr/local/bin/choose-mirror"]="0:0:755"
+  ["/usr/local/bin/livecd-sound"]="0:0:755"
 )
