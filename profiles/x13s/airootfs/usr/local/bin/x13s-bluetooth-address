@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Give the WCN6855 a usable Bluetooth device address.
+#
+# The controller has no address of its own under mainline: the real one is in
+# the laptop's DPP partition, which only dtbloader knows how to read. Without an
+# address, bluetoothd will not retain pairings.
+#
+# Generates a random locally-administered unicast address: second-least-
+# significant bit of the first octet set (locally administered), least
+# significant bit clear (unicast).
+set -euo pipefail
+
+command -v btmgmt >/dev/null || exit 0
+
+first=$(( ( RANDOM % 256 & 0xFE ) | 0x02 ))
+addr=$(printf '%02X' "$first")
+for _ in {1..5}; do
+    addr+=$(printf ':%02X' $(( RANDOM % 256 )))
+done
+
+for i in {0..9}; do
+    if btmgmt --index "$i" info >/dev/null 2>&1; then
+        btmgmt --index "$i" public-addr "$addr" || true
+    fi
+done

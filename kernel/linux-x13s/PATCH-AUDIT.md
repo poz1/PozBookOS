@@ -57,7 +57,7 @@ with GCC for the kernel), this yields significantly better codegen for big.LITTL
 | 4-lane DisplayPort Alt Mode | Not implemented | Only 2-lane works; limits external display resolution/refresh |
 | Coldplug USB-C orientation detection | Broken | Orientation only detected on hotplug, not at boot |
 | Skin temperature thermal throttling | Not implemented | Chassis temperature is not used as a thermal input; surface can get uncomfortably hot under load |
-| Hardware video decode/encode | WIP firmware only | Requires `qcvss8280.mbn` firmware which is not publicly distributed. Iris driver v4 patchset posted upstream March 2026 but not yet merged. |
+| Hardware video decode | Shipped, untested on hardware | `qcvss8280.mbn` **is** publicly distributed -- it has been in linux-firmware since the 2025-05-28 "qcom: sc8280xp: FW blob updates for X13s" commit and is installed here by linux-firmware-qcom. The Iris device tree nodes are in this patch series with `status = "okay"`, and `CONFIG_VIDEO_QCOM_IRIS=m`. Verify on the machine with `v4l2-ctl --list-devices`. |
 | Hibernation | Not supported | ARM64 PSCI limitation; no timeline |
 | TPM | Not supported | Not exposed by firmware |
 | Virtualization (KVM) | Not supported | Firmware does not configure EL2 for Linux |
@@ -65,7 +65,7 @@ with GCC for the kernel), this yields significantly better codegen for big.LITTL
 | USB disconnect wakeup | Bug | USB disconnects can trigger spurious wakeups from suspend |
 | DisplayPort audio | Not available | DP audio output is unimplemented |
 | Speaker full volume | Restricted | Missing active speaker protection driver; volume capped to prevent damage |
-| Camera | Intermittent boot failure | Registration race can break boot; hack patch available but not in this set |
+| Camera | Works (libcamera softISP) | Registration race can break boot; hack patch available but not in this set |
 | Pops/clicks during audio playback | Known issue | Present on all current kernels |
 | Bluetooth range | Limited | Missing board-specific firmware files (`hpbtfw21.tlv`, `hpnv21.b8c`, `hpnv21g.b8c`) |
 | WiFi static MAC address | Workaround needed | MAC resets every boot; requires udev rule |

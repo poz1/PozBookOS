@@ -163,6 +163,7 @@ unzip
 # and pipewire-libcamera is what makes it visible to Firefox.
 libcamera
 libcamera-tools
+gst-plugin-libcamera
 pipewire-libcamera
 v4l-utils
 

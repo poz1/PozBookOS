@@ -1,0 +1,22 @@
+[Unit]
+Description=Assign a Bluetooth device address on the ThinkPad X13s
+Documentation=https://github.com/jhovold/linux/wiki/X13s
+# The WCN6855 comes up with 00:00:00:00:00:00 because the address lives in the
+# laptop's factory DPP partition and nothing in mainline reads it. With a null
+# address pairings are not retained and some peripherals refuse to pair at all.
+#
+# A random locally-administered address is generated per boot rather than
+# hardcoded: a fixed address baked into a live ISO would collide the moment two
+# X13s are in the same room. Pairings therefore survive the session but not a
+# reboot -- for a persistent factory address, use dtbloader.
+ConditionPathExistsGlob=/sys/class/bluetooth/hci*
+Before=bluetooth.service
+Wants=bluetooth.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/x13s-bluetooth-address
+
+[Install]
+WantedBy=bluetooth.service
