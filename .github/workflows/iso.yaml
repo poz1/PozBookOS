@@ -54,7 +54,11 @@ jobs:
     needs: [kernel, find-kernel-run]
     if: ${{ always() && (needs.kernel.result == 'success' || needs.find-kernel-run.result == 'success') }}
     container:
-      image: ghcr.io/${{ github.repository }}/alarm-ci:latest
+      # Hardcoded lowercase on purpose: Docker rejects a repository name with
+      # uppercase letters, and ${{ github.repository }} preserves the case of
+      # poz1/PozBookOS. docker/metadata-action lowercases it on the push side in
+      # container.yaml, so this is the name the image actually lands under.
+      image: ghcr.io/poz1/pozbookos/alarm-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

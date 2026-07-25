@@ -16,11 +16,11 @@ RUN sed -i "s/^#\?DisableSandbox/DisableSandbox/" /etc/pacman.conf \
     && pacman -Syu --noconfirm
 
 # Kernel build dependencies.
-#   dwarves -> pahole, required by CONFIG_DEBUG_INFO_BTF; without it Kconfig
+#   pahole -> pahole, required by CONFIG_DEBUG_INFO_BTF; without it Kconfig
 #              silently drops BTF and with it CONFIG_SCHED_CLASS_EXT.
 #   cpio, rsync, zstd -> used by modules_install / initramfs / module compression.
 RUN pacman -S --noconfirm \
-    base-devel bc clang cpio docbook-xsl dtc dwarves git inetutils kmod lld llvm \
+    base-devel bc clang cpio docbook-xsl dtc pahole git inetutils kmod lld llvm \
     libelf openssl perl python rsync uboot-tools xmlto zstd
 
 # archiso, pinned and checksum-verified, plus device tree support.
