@@ -1,10 +1,14 @@
 # mkinitcpio preset file for the '%PKGBASE%' package
 
-ALL_config="/etc/mkinitcpio.conf.d/x13s.conf"
+# Deliberately no ALL_config: setting it makes mkinitcpio run with -c, which
+# sets _optconfd=0 and disables /etc/mkinitcpio.conf.d entirely -- including
+# this package's own x13s.conf drop-in. Leaving it unset uses the default
+# /etc/mkinitcpio.conf plus the drop-ins, which is the point of shipping one.
 ALL_kver="%KERNVER%"
 
-PRESETS=('default')
+PRESETS=('default' 'fallback')
 
-#default_config="/etc/mkinitcpio.conf"
 default_image="/boot/initramfs-linux-x13s.img"
-#default_options=""
+
+fallback_image="/boot/initramfs-linux-x13s-fallback.img"
+fallback_options="-S autodetect"

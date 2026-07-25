@@ -156,8 +156,8 @@ _package() {
 
 _package-headers() {
   pkgdesc="Header files and scripts for building modules for linux kernel - ${_desc}"
-  provides=("linux-x13s-headers=${pkgver}")
-  conflicts=('linux-x13s-headers')
+  provides=("linux-headers=${pkgver}")
+  conflicts=('linux-headers')
 
   cd $_srcname
   local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
